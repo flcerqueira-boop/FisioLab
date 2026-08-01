@@ -7,6 +7,7 @@ const APP_SHELL = [
   "./icon-512.png",
   "./apple-touch-icon.png",
   "./logo-wordmark.png",
+  "./ortoflix-logo.png",
 ];
 
 self.addEventListener("install", (event) => {

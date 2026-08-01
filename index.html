@@ -269,11 +269,14 @@ function SimuladorCorrentes({ onBack }) {
         <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "#262D35", background: "#171B21" }}>
           <div>
             <p className="font-mono text-xs tracking-widest uppercase" style={{ color: "#E8892C" }}>
-              Simulador didático — princípios físicos da eletricidade
+              Simulador didático
             </p>
             <h1 className="font-display text-2xl" style={{ color: "#F2EFE6" }}>
-              GERADOR DE CORRENTES · Prof. Felipe Cerqueira
+              SIMULADOR DE CORRENTES
             </h1>
+            <p className="font-mono text-xs tracking-widest uppercase" style={{ color: "#E8892C" }}>
+              by OrtoFlix
+            </p>
           </div>
           {onBack && (
             <button
@@ -528,6 +531,8 @@ function SimuladorCorrentes({ onBack }) {
           </button>
         )}
       </div>
+
+      {!presentMode && <ContactFooter dark />}
     </div>
   );
 }
@@ -564,7 +569,7 @@ function Slider({ label, value, unit, min, max, step, onChange }) {
 const TOOLS = [
   {
     id: "correntes",
-    title: "Gerador de Correntes",
+    title: "Simulador de Correntes",
     subtitle: "Eletroterapia",
     description: "Visualize tipos de corrente elétrica e seus parâmetros em tempo real.",
     component: SimuladorCorrentes,
@@ -581,6 +586,32 @@ const EXTERNAL_TOOLS = [
     url: "https://claude.ai/public/artifacts/0e215812-fa6f-484a-8c05-25e0c19801f6",
   },
 ];
+
+function ContactFooter({ dark }) {
+  const textColor = dark ? "#8A94A0" : "#A1A1A6";
+  const pillBg = dark ? "#171B21" : "#FFFFFF";
+  const pillBorder = dark ? "#3A4650" : "#E5E5EA";
+  const pillText = dark ? "#DCE1E5" : "#1D1D1F";
+  const pillStyle = { background: pillBg, border: `1px solid ${pillBorder}`, color: pillText };
+  return (
+    <div className="mt-8 text-center px-4 pb-8">
+      <p className="text-xs" style={{ color: textColor }}>
+        Desenvolvido por Prof. Felipe Cerqueira
+      </p>
+      <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+        <a href="mailto:suporte@ortoflix.com" className="text-xs font-medium px-3 py-1.5 rounded-full" style={pillStyle}>
+          suporte@ortoflix.com
+        </a>
+        <a href="https://instagram.com/felipe_cerqueira" target="_blank" rel="noopener noreferrer" className="text-xs font-medium px-3 py-1.5 rounded-full" style={pillStyle}>
+          @felipe_cerqueira
+        </a>
+        <a href="https://instagram.com/ortoflix" target="_blank" rel="noopener noreferrer" className="text-xs font-medium px-3 py-1.5 rounded-full" style={pillStyle}>
+          @ortoflix
+        </a>
+      </div>
+    </div>
+  );
+}
 
 function ToolCard({ tool, onSelect }) {
   return (
@@ -633,27 +664,15 @@ function Home({ onSelect }) {
   return (
     <div className="min-h-screen w-full" style={{ background: "#F5F5F7" }}>
       <div className="px-5 pt-8 pb-6 text-center">
-        <div
-          className="mx-auto mb-3 w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
-          style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}
-        >
-          🧪
-        </div>
         <h1 className="text-2xl font-bold" style={{ color: "#1D1D1F" }}>
-          FisioLab{" "}
-          <span
-            className="align-middle text-[10px] font-semibold px-1.5 py-0.5 rounded"
-            style={{ background: "#F97316", color: "#FFFFFF" }}
-          >
-            BETA
-          </span>
+          Fisio<span style={{ color: "#F97316" }}>Lab</span>
         </h1>
         <p className="text-sm mt-1" style={{ color: "#6E6E73" }}>
           by OrtoFlix — Ambiente de Estudo
         </p>
       </div>
 
-      <div className="px-5 pb-10 max-w-2xl mx-auto">
+      <div className="px-5 pb-6 max-w-2xl mx-auto">
         <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: "#6E6E73" }}>
           Ferramentas
         </p>
@@ -666,20 +685,12 @@ function Home({ onSelect }) {
           ))}
         </div>
 
-        <div
-          className="mt-4 rounded-2xl p-5 text-center"
-          style={{ background: "#FFFFFF", border: "1px dashed #D2D2D7" }}
-        >
-          <p className="text-sm" style={{ color: "#6E6E73" }}>
-            Mais ferramentas de estudo chegam ao longo do semestre.
-          </p>
-        </div>
-
         <div className="mt-8 rounded-2xl p-6 text-center" style={{ background: "#1D1D1F" }}>
-          <p className="text-2xl mb-2">🎬</p>
-          <h3 className="text-lg font-semibold mb-1" style={{ color: "#FFFFFF" }}>
-            OrtoFlix
-          </h3>
+          <img
+            src="ortoflix-logo.png"
+            alt="OrtoFlix"
+            style={{ maxWidth: "240px", width: "70%", height: "auto", margin: "0 auto 16px" }}
+          />
           <p className="text-sm leading-relaxed mb-4" style={{ color: "#A1A1A6" }}>
             O maior streaming de fisioterapia ortopédica do Brasil. Conteúdo
             em série para estudantes e profissionais.
@@ -695,11 +706,7 @@ function Home({ onSelect }) {
           </a>
         </div>
 
-        <p className="text-center text-xs mt-8" style={{ color: "#A1A1A6" }}>
-          FisioLab BETA by OrtoFlix
-          <br />
-          Desenvolvido por Prof. Felipe Cerqueira
-        </p>
+        <ContactFooter />
       </div>
     </div>
   );
