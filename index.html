@@ -678,16 +678,29 @@ function ExternalToolCard({ tool }) {
   );
 }
 
+function CubeIcon({ size = 56 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100">
+      <path d="M50,8 L86.4,29 L50,50 L13.6,29 Z" fill="#FFFFFF" stroke="#12233A" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M13.6,29 L50,50 L50,92 L13.6,71 Z" fill="#F2F2F2" stroke="#12233A" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M50,50 L86.4,29 L86.4,71 L50,92 Z" fill="#22C55E" stroke="#12233A" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function Home({ onSelect }) {
   return (
     <div className="min-h-screen w-full" style={{ background: "#F5F5F7" }}>
-      <div className="px-5 pt-8 pb-6 text-center">
-        <h1 className="text-5xl" style={{ color: "#1D1D1F", fontFamily: "'Poppins', sans-serif", fontWeight: 800 }}>
-          Fisio<span style={{ color: "#22C55E" }}>Lab</span>
-        </h1>
-        <p className="text-sm mt-1" style={{ color: "#6E6E73" }}>
-          by OrtoFlix — Ambiente de Estudo
-        </p>
+      <div className="px-5 pt-8 pb-6 flex items-center justify-center gap-3">
+        <CubeIcon size={56} />
+        <div className="text-left">
+          <h1 className="text-4xl leading-none" style={{ color: "#1D1D1F", fontFamily: "'Poppins', sans-serif", fontWeight: 800 }}>
+            Fisio<span style={{ color: "#22C55E" }}>Lab</span>
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "#6E6E73" }}>
+            by OrtoFlix — Ambiente de Estudo
+          </p>
+        </div>
       </div>
 
       <div className="px-5 pb-6 max-w-2xl mx-auto">
