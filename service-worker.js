@@ -1,4 +1,4 @@
-const CACHE_NAME = "fisiolab-v1";
+const CACHE_NAME = "fisiolab-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -12,37 +12,63 @@ const APP_SHELL = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    (async () => {
+      try {
+        const cache = await caches.open(CACHE_NAME);
+        // adiciona cada item individualmente: se um falhar, os outros continuam
+        await Promise.all(
+          APP_SHELL.map((url) => cache.add(url).catch(() => {}))
+        );
+      } catch (e) {
+        // Ambientes restritos (ex.: Safari em modo privado) podem bloquear a
+        // Cache Storage API. Se isso acontecer, o app deve continuar
+        // funcionando normalmente, só sem cache offline.
+      }
+      self.skipWaiting();
+    })()
   );
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+    (async () => {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)));
+      } catch (e) {
+        // idem: ignora falha de Cache Storage em ambientes restritos
+      }
+      self.clients.claim();
+    })()
   );
-  self.clients.claim();
 });
 
-// Cache-first for the app shell; network-first (falling back to cache) for
-// everything else (e.g. CDN scripts/fonts), so the app still opens offline
-// after the first successful load.
+// Só intercepta requisições do mesmo domínio (o próprio FisioLab). Scripts de
+// CDN externos (React, Babel, Tailwind, fontes) passam direto pelo navegador,
+// sem passar pelo cache — evita qualquer problema com respostas "opacas" de
+// origens cruzadas.
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
+  if (new URL(request.url).origin !== self.location.origin) return;
 
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          return response;
-        })
-        .catch(() => cached);
-    })
+    (async () => {
+      try {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        const response = await fetch(request);
+        try {
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(request, response.clone());
+        } catch (e) {
+          // ignora falha ao gravar cache — a resposta de rede já será usada
+        }
+        return response;
+      } catch (e) {
+        // rede e cache indisponíveis: deixa o navegador tentar a requisição normalmente
+        return fetch(request);
+      }
+    })()
   );
 });
