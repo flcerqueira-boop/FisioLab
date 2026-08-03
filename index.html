@@ -266,7 +266,7 @@ function SimuladorCorrentes({ onBack }) {
       `}</style>
 
       {!presentMode && (
-        <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "#262D35", background: "#171B21" }}>
+        <div className="px-5 pb-4 border-b flex items-center justify-between" style={{ borderColor: "#262D35", background: "#171B21", paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}>
           <div>
             <h1 className="font-display text-2xl" style={{ color: "#F2EFE6" }}>
               SIMULADOR DE CORRENTES
@@ -558,6 +558,567 @@ function Slider({ label, value, unit, min, max, step, onChange }) {
 
 
 /* =========================================================================
+   PALAVRAS CRUZADAS — motor de geração + interface de jogo.
+   Para criar um novo banco de palavras, monte um array de
+   { answer, clue } e chame generateCrossword(words) — o layout é
+   calculado automaticamente (posições, interseções, numeração).
+   ========================================================================= */
+
+function normalizeAnswer(word) {
+  return word
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function generateCrossword(rawWords) {
+  const words = rawWords
+    .map((w) => ({ ...w, answer: normalizeAnswer(w.answer) }))
+    .sort((a, b) => b.answer.length - a.answer.length);
+
+  const cells = new Map();
+  const placements = [];
+
+  function canPlace(word, x, y, dir) {
+    let intersections = 0;
+    for (let i = 0; i < word.length; i++) {
+      const cx = dir === "H" ? x + i : x;
+      const cy = dir === "V" ? y + i : y;
+      const key = `${cx},${cy}`;
+      const existing = cells.get(key);
+      if (existing) {
+        if (existing !== word[i]) return null;
+        intersections++;
+      } else {
+        if (dir === "H") {
+          if (cells.has(`${cx},${cy - 1}`) || cells.has(`${cx},${cy + 1}`)) return null;
+        } else {
+          if (cells.has(`${cx - 1},${cy}`) || cells.has(`${cx + 1},${cy}`)) return null;
+        }
+      }
+    }
+    const beforeX = dir === "H" ? x - 1 : x;
+    const beforeY = dir === "V" ? y - 1 : y;
+    const afterX = dir === "H" ? x + word.length : x;
+    const afterY = dir === "V" ? y + word.length : y;
+    if (cells.has(`${beforeX},${beforeY}`) || cells.has(`${afterX},${afterY}`)) return null;
+    return intersections;
+  }
+
+  function place(word, x, y, dir) {
+    for (let i = 0; i < word.length; i++) {
+      const cx = dir === "H" ? x + i : x;
+      const cy = dir === "V" ? y + i : y;
+      cells.set(`${cx},${cy}`, word[i]);
+    }
+  }
+
+  function tryPlaceAgainstExisting(w) {
+    let best = null;
+    for (const placed of placements) {
+      for (let i = 0; i < w.answer.length; i++) {
+        for (let j = 0; j < placed.answer.length; j++) {
+          if (w.answer[i] !== placed.answer[j]) continue;
+          const newDir = placed.dir === "H" ? "V" : "H";
+          let x, y;
+          if (placed.dir === "H") {
+            x = placed.x + j;
+            y = placed.y - i;
+          } else {
+            x = placed.x - i;
+            y = placed.y + j;
+          }
+          const score = canPlace(w.answer, x, y, newDir);
+          if (score !== null && score > 0) {
+            if (!best || score > best.score) best = { x, y, dir: newDir, score };
+          }
+        }
+      }
+    }
+    return best;
+  }
+
+  place(words[0].answer, 0, 0, "H");
+  placements.push({ ...words[0], x: 0, y: 0, dir: "H" });
+
+  for (let idx = 1; idx < words.length; idx++) {
+    const best = tryPlaceAgainstExisting(words[idx]);
+    if (best) {
+      place(words[idx].answer, best.x, best.y, best.dir);
+      placements.push({ ...words[idx], x: best.x, y: best.y, dir: best.dir });
+    }
+  }
+  const placedAnswers = new Set(placements.map((p) => p.answer));
+  for (const w of words.filter((w) => !placedAnswers.has(w.answer))) {
+    const best = tryPlaceAgainstExisting(w);
+    if (best) {
+      place(w.answer, best.x, best.y, best.dir);
+      placements.push({ ...w, x: best.x, y: best.y, dir: best.dir });
+    }
+  }
+
+  let minX = 0, minY = 0, maxX = 0, maxY = 0;
+  for (const p of placements) {
+    const endX = p.dir === "H" ? p.x + p.answer.length - 1 : p.x;
+    const endY = p.dir === "V" ? p.y + p.answer.length - 1 : p.y;
+    minX = Math.min(minX, p.x, endX);
+    minY = Math.min(minY, p.y, endY);
+    maxX = Math.max(maxX, p.x, endX);
+    maxY = Math.max(maxY, p.y, endY);
+  }
+  const normalized = placements.map((p) => ({ ...p, x: p.x - minX, y: p.y - minY }));
+  const width = maxX - minX + 1;
+  const height = maxY - minY + 1;
+
+  // numeração: ordena os pontos de início em ordem de leitura (linha, depois coluna)
+  const starts = [...normalized].sort((a, b) => (a.y - b.y) || (a.x - b.x));
+  const numberByCoord = new Map();
+  let n = 0;
+  for (const p of starts) {
+    const key = `${p.x},${p.y}`;
+    if (!numberByCoord.has(key)) {
+      n++;
+      numberByCoord.set(key, n);
+    }
+  }
+  const numbered = normalized.map((p) => ({ ...p, number: numberByCoord.get(`${p.x},${p.y}`) }));
+
+  return { placements: numbered, width, height };
+}
+
+const KINESIO_WORDS = [
+  { answer: "ALAVANCA", clue: "Sistema mecânico formado por uma barra rígida que gira em torno de um ponto fixo." },
+  { answer: "TORQUE", clue: "Medida da força de rotação em torno de um eixo; também chamado de momento de força." },
+  { answer: "FULCRO", clue: "Ponto de apoio ou eixo de rotação de uma alavanca." },
+  { answer: "AGONISTA", clue: "Músculo principal responsável por produzir um movimento específico." },
+  { answer: "ANTAGONISTA", clue: "Músculo que se opõe à ação do motor primário." },
+  { answer: "SINERGISTA", clue: "Músculo que auxilia o agonista a realizar o movimento com eficiência." },
+  { answer: "ISOMETRICA", clue: "Tipo de contração muscular em que o comprimento do músculo não se altera." },
+  { answer: "CONCENTRICA", clue: "Tipo de contração em que o músculo se encurta durante a produção de força." },
+  { answer: "EXCENTRICA", clue: "Tipo de contração em que o músculo se alonga enquanto produz força." },
+  { answer: "GONIOMETRO", clue: "Instrumento utilizado para medir a amplitude de movimento articular." },
+  { answer: "SAGITAL", clue: "Plano que divide o corpo em lados direito e esquerdo." },
+  { answer: "TRANSVERSO", clue: "Plano que divide o corpo em partes superior e inferior." },
+  { answer: "CINETICA", clue: "Ramo da biomecânica que estuda as forças que causam o movimento." },
+  { answer: "CINEMATICA", clue: "Ramo da biomecânica que descreve o movimento sem considerar suas causas." },
+];
+
+function PalavrasCruzadas({ onBack }) {
+  const { useState, useMemo, useRef } = React;
+  const puzzle = useMemo(() => generateCrossword(KINESIO_WORDS), []);
+  const [values, setValues] = useState({});
+  const [checked, setChecked] = useState(false);
+  const inputRefs = useRef({});
+
+  const solutionByCell = useMemo(() => {
+    const map = new Map();
+    for (const p of puzzle.placements) {
+      for (let i = 0; i < p.answer.length; i++) {
+        const x = p.dir === "H" ? p.x + i : p.x;
+        const y = p.dir === "V" ? p.y + i : p.y;
+        map.set(`${x},${y}`, p.answer[i]);
+      }
+    }
+    return map;
+  }, [puzzle]);
+
+  const startNumberByCell = useMemo(() => {
+    const map = new Map();
+    for (const p of puzzle.placements) {
+      map.set(`${p.x},${p.y}`, p.number);
+    }
+    return map;
+  }, [puzzle]);
+
+  const uniqueCells = useMemo(() => {
+    const list = [...solutionByCell.keys()].map((key) => {
+      const [x, y] = key.split(",").map(Number);
+      return { key, x, y };
+    });
+    list.sort((a, b) => a.y - b.y || a.x - b.x);
+    return list;
+  }, [solutionByCell]);
+
+  const cellOrder = useMemo(() => {
+    // ordem de tabulação: por palavra, na ordem de leitura (sem repetir interseções)
+    const ordered = [];
+    const seen = new Set();
+    const sorted = [...puzzle.placements].sort((a, b) => a.number - b.number || (a.dir === "H" ? -1 : 1));
+    for (const p of sorted) {
+      for (let i = 0; i < p.answer.length; i++) {
+        const x = p.dir === "H" ? p.x + i : p.x;
+        const y = p.dir === "V" ? p.y + i : p.y;
+        const key = `${x},${y}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          ordered.push(key);
+        }
+      }
+    }
+    return ordered;
+  }, [puzzle]);
+
+  function handleChange(key, raw) {
+    const letter = normalizeAnswer(raw).slice(-1);
+    setValues((v) => ({ ...v, [key]: letter }));
+    setChecked(false);
+    if (letter) {
+      const idx = cellOrder.indexOf(key);
+      const next = cellOrder[idx + 1];
+      if (next && inputRefs.current[next]) inputRefs.current[next].focus();
+    }
+  }
+
+  function handleKeyDown(key, e) {
+    if (e.key === "Backspace" && !values[key]) {
+      const idx = cellOrder.indexOf(key);
+      const prev = cellOrder[idx - 1];
+      if (prev && inputRefs.current[prev]) inputRefs.current[prev].focus();
+    }
+  }
+
+  function verificar() {
+    setChecked(true);
+  }
+
+  function limpar() {
+    setValues({});
+    setChecked(false);
+  }
+
+  const totalCells = solutionByCell.size;
+  const correctCells = [...solutionByCell.entries()].filter(([k, letter]) => values[k] === letter).length;
+  const completo = checked && correctCells === totalCells;
+
+  const cellSize = 30;
+
+  const horizontais = puzzle.placements.filter((p) => p.dir === "H").sort((a, b) => a.number - b.number);
+  const verticais = puzzle.placements.filter((p) => p.dir === "V").sort((a, b) => a.number - b.number);
+
+  return (
+    <div
+      className="min-h-screen w-full"
+      style={{
+        background: "#F5F5F7",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        MozUserSelect: "none",
+        msUserSelect: "none",
+        WebkitTouchCallout: "none",
+      }}
+      onCopy={(e) => e.preventDefault()}
+      onCut={(e) => e.preventDefault()}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <div
+        className="px-5 pb-4 border-b flex items-center justify-between"
+        style={{ borderColor: "#E5E5EA", background: "#FFFFFF", paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
+      >
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: "#1D1D1F" }}>Palavras Cruzadas</h1>
+          <p className="text-sm" style={{ color: "#6E6E73" }}>Cinesiologia e Biomecânica</p>
+        </div>
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap"
+            style={{ background: "#F5F5F7", border: "1px solid #E5E5EA", color: "#6E6E73" }}
+          >
+            ← FisioLab
+          </button>
+        )}
+      </div>
+
+      <div className="p-4 max-w-3xl mx-auto">
+        <div className="overflow-x-auto pb-2">
+          <div
+            style={{
+              position: "relative",
+              width: puzzle.width * cellSize,
+              height: puzzle.height * cellSize,
+              margin: "0 auto",
+            }}
+          >
+            {uniqueCells.map(({ key, x, y }) => {
+              const startNumber = startNumberByCell.get(key) || null;
+              const value = values[key] || "";
+              const solution = solutionByCell.get(key);
+              const isCorrect = checked && value === solution;
+              const isWrong = checked && value && value !== solution;
+              return (
+                <div
+                  key={key}
+                  style={{
+                    position: "absolute",
+                    left: x * cellSize,
+                    top: y * cellSize,
+                    width: cellSize,
+                    height: cellSize,
+                  }}
+                >
+                  {startNumber && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 1,
+                        left: 2,
+                        fontSize: 8,
+                        color: "#9A9AA0",
+                        zIndex: 2,
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {startNumber}
+                    </span>
+                  )}
+                  <input
+                    ref={(el) => (inputRefs.current[key] = el)}
+                    value={value}
+                    onChange={(e) => handleChange(key, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(key, e)}
+                    maxLength={1}
+                    className="text-center font-semibold"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      border: `1px solid ${isCorrect ? "#22C55E" : isWrong ? "#EF4444" : "#D2D2D7"}`,
+                      background: isCorrect ? "#DCFCE7" : isWrong ? "#FEE2E2" : "#FFFFFF",
+                      color: "#1D1D1F",
+                      fontSize: 14,
+                      outline: "none",
+                      padding: 0,
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex gap-2 justify-center my-4">
+          <button
+            onClick={verificar}
+            className="text-sm font-semibold px-5 py-2.5 rounded-full"
+            style={{ background: "#22C55E", color: "#FFFFFF" }}
+          >
+            Verificar
+          </button>
+          <button
+            onClick={limpar}
+            className="text-sm font-medium px-5 py-2.5 rounded-full"
+            style={{ background: "#FFFFFF", border: "1px solid #E5E5EA", color: "#6E6E73" }}
+          >
+            Limpar
+          </button>
+        </div>
+
+        {checked && (
+          <p className="text-center text-sm mb-4" style={{ color: completo ? "#22C55E" : "#6E6E73" }}>
+            {completo ? "🎉 Completo! Todas as respostas corretas." : `${correctCells} de ${totalCells} letras corretas.`}
+          </p>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="rounded-2xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+            <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#22C55E" }}>Horizontais</p>
+            {horizontais.map((p) => (
+              <p key={p.number + "H"} className="text-sm mb-2" style={{ color: "#1D1D1F" }}>
+                <strong>{p.number}.</strong> {p.clue}
+              </p>
+            ))}
+          </div>
+          <div className="rounded-2xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+            <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#22C55E" }}>Verticais</p>
+            {verticais.map((p) => (
+              <p key={p.number + "V"} className="text-sm mb-2" style={{ color: "#1D1D1F" }}>
+                <strong>{p.number}.</strong> {p.clue}
+              </p>
+            ))}
+          </div>
+        </div>
+
+        <ContactFooter />
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================================
+   SUPER TRUNFO — RECURSOS FÍSICOS
+   Baralho único e fixo. Sem sincronização entre aparelhos: cada aluno
+   embaralha e revela cartas no próprio celular, compara o atributo
+   escolhido em voz alta com o colega, e decidem juntos quem "leva" a
+   rodada — igual ao baralho físico.
+   ========================================================================= */
+
+const TRUNFO_ATRIBUTOS = [
+  { key: "analgesia", label: "Analgesia" },
+  { key: "antiInflamatorio", label: "Anti-inflamatório" },
+  { key: "efeitoFratura", label: "Efeito em fratura" },
+  { key: "respostaMuscular", label: "Resposta muscular" },
+  { key: "parametros", label: "Parâmetros moduláveis" },
+  { key: "seguranca", label: "Segurança" },
+];
+
+const TRUNFO_CARTAS = [
+  { nome: "TENS", analgesia: 10, antiInflamatorio: 2, efeitoFratura: 1, respostaMuscular: 5, parametros: 7, seguranca: 9 },
+  { nome: "Corrente Russa", analgesia: 3, antiInflamatorio: 2, efeitoFratura: 1, respostaMuscular: 9, parametros: 7, seguranca: 6 },
+  { nome: "Interferencial", analgesia: 8, antiInflamatorio: 4, efeitoFratura: 1, respostaMuscular: 5, parametros: 8, seguranca: 8 },
+  { nome: "Aussie", analgesia: 6, antiInflamatorio: 3, efeitoFratura: 1, respostaMuscular: 8, parametros: 7, seguranca: 7 },
+  { nome: "FES", analgesia: 2, antiInflamatorio: 1, efeitoFratura: 1, respostaMuscular: 9, parametros: 6, seguranca: 6 },
+  { nome: "Microcorrentes", analgesia: 4, antiInflamatorio: 6, efeitoFratura: 5, respostaMuscular: 1, parametros: 5, seguranca: 10 },
+  { nome: "Galvânica / Iontoforese", analgesia: 4, antiInflamatorio: 6, efeitoFratura: 1, respostaMuscular: 3, parametros: 4, seguranca: 5 },
+  { nome: "Ultrassom Terapêutico", analgesia: 5, antiInflamatorio: 7, efeitoFratura: 8, respostaMuscular: 2, parametros: 8, seguranca: 7 },
+  { nome: "Laser (Fototerapia)", analgesia: 7, antiInflamatorio: 10, efeitoFratura: 5, respostaMuscular: 3, parametros: 6, seguranca: 8 },
+  { nome: "Ondas Curtas", analgesia: 5, antiInflamatorio: 6, efeitoFratura: 2, respostaMuscular: 2, parametros: 5, seguranca: 4 },
+  { nome: "Micro-ondas", analgesia: 5, antiInflamatorio: 6, efeitoFratura: 2, respostaMuscular: 2, parametros: 4, seguranca: 4 },
+  { nome: "Infravermelho", analgesia: 4, antiInflamatorio: 4, efeitoFratura: 0, respostaMuscular: 1, parametros: 3, seguranca: 9 },
+  { nome: "Crioterapia", analgesia: 7, antiInflamatorio: 7, efeitoFratura: 1, respostaMuscular: 1, parametros: 3, seguranca: 8 },
+  { nome: "Terapia Combinada", analgesia: 7, antiInflamatorio: 7, efeitoFratura: 7, respostaMuscular: 6, parametros: 9, seguranca: 6 },
+];
+
+function shuffleDeck(deck) {
+  const arr = [...deck];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function SuperTrunfo({ onBack }) {
+  const { useState, useMemo } = React;
+  const [order, setOrder] = useState(() => shuffleDeck(TRUNFO_CARTAS));
+  const [index, setIndex] = useState(0);
+  const [rodada, setRodada] = useState(1);
+  const [showHelp, setShowHelp] = useState(false);
+
+  const carta = order[index];
+
+  function proximaCarta() {
+    if (index + 1 >= order.length) {
+      setOrder(shuffleDeck(TRUNFO_CARTAS));
+      setIndex(0);
+    } else {
+      setIndex(index + 1);
+    }
+    setRodada((r) => r + 1);
+  }
+
+  function embaralharDeNovo() {
+    setOrder(shuffleDeck(TRUNFO_CARTAS));
+    setIndex(0);
+    setRodada(1);
+  }
+
+  const maxByAttr = useMemo(() => {
+    const map = {};
+    for (const attr of TRUNFO_ATRIBUTOS) {
+      map[attr.key] = Math.max(...TRUNFO_CARTAS.map((c) => c[attr.key]));
+    }
+    return map;
+  }, []);
+
+  return (
+    <div className="min-h-screen w-full" style={{ background: "#F5F5F7" }}>
+      <div
+        className="px-5 pb-4 border-b flex items-center justify-between"
+        style={{ borderColor: "#E5E5EA", background: "#FFFFFF", paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
+      >
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: "#1D1D1F" }}>Super Trunfo</h1>
+          <p className="text-sm" style={{ color: "#6E6E73" }}>Recursos Físicos</p>
+        </div>
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap"
+            style={{ background: "#F5F5F7", border: "1px solid #E5E5EA", color: "#6E6E73" }}
+          >
+            ← FisioLab
+          </button>
+        )}
+      </div>
+
+      <div className="p-4 max-w-md mx-auto">
+        <button
+          onClick={() => setShowHelp((v) => !v)}
+          className="w-full text-left text-sm font-medium mb-4 px-4 py-3 rounded-2xl"
+          style={{ background: "#FFFFFF", border: "1px solid #E5E5EA", color: "#1D1D1F" }}
+        >
+          {showHelp ? "▾" : "▸"} Como jogar (em dupla, cada um com seu celular)
+        </button>
+        {showHelp && (
+          <div className="text-sm leading-relaxed mb-4 px-4" style={{ color: "#6E6E73" }}>
+            <p className="mb-2">1. Cada jogador abre esse jogo no próprio celular.</p>
+            <p className="mb-2">2. Cada um toca em "Próxima carta" e vê sua carta atual.</p>
+            <p className="mb-2">3. Quem começa escolhe um atributo (ex.: Analgesia) e fala o valor da sua carta em voz alta.</p>
+            <p className="mb-2">4. O colega fala o valor da carta dele no mesmo atributo. Quem tiver o maior número vence a rodada.</p>
+            <p>5. Toquem em "Próxima carta" e repitam — não precisa registrar placar, o jogo é sobre discutir por que cada recurso ganha ou perde em cada critério.</p>
+          </div>
+        )}
+
+        <p className="text-center text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9A9AA0" }}>
+          Rodada {rodada}
+        </p>
+
+        <div className="rounded-3xl p-6 mb-4" style={{ background: "#1D1D1F" }}>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "#22C55E" }}>
+            Recurso físico
+          </p>
+          <h2 className="text-2xl font-bold mb-5" style={{ color: "#FFFFFF" }}>{carta.nome}</h2>
+
+          <div className="space-y-3">
+            {TRUNFO_ATRIBUTOS.map((attr) => {
+              const value = carta[attr.key];
+              const isTop = value === maxByAttr[attr.key];
+              return (
+                <div key={attr.key}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm" style={{ color: "#D1D1D6" }}>{attr.label}</span>
+                    <span
+                      className="text-sm font-bold px-2 py-0.5 rounded"
+                      style={{ color: isTop ? "#1D1D1F" : "#FFFFFF", background: isTop ? "#22C55E" : "#3A3A3D" }}
+                    >
+                      {value}
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full" style={{ background: "#3A3A3D" }}>
+                    <div
+                      className="h-1.5 rounded-full"
+                      style={{ width: `${value * 10}%`, background: isTop ? "#22C55E" : "#6E6E73" }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex gap-2 justify-center mb-6">
+          <button
+            onClick={proximaCarta}
+            className="text-sm font-semibold px-6 py-3 rounded-full"
+            style={{ background: "#22C55E", color: "#FFFFFF" }}
+          >
+            Próxima carta
+          </button>
+          <button
+            onClick={embaralharDeNovo}
+            className="text-sm font-medium px-5 py-3 rounded-full"
+            style={{ background: "#FFFFFF", border: "1px solid #E5E5EA", color: "#6E6E73" }}
+          >
+            Embaralhar
+          </button>
+        </div>
+
+        <ContactFooter />
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================================
    TELA INICIAL — catálogo de ferramentas do FisioLab.
    Para adicionar uma nova ferramenta no futuro: crie o componente e
    acrescente uma entrada no array TOOLS abaixo.
@@ -571,6 +1132,20 @@ const TOOLS = [
     description: "Visualize tipos de corrente elétrica e seus parâmetros em tempo real.",
     component: SimuladorCorrentes,
   },
+  {
+    id: "palavras-cruzadas",
+    title: "Palavras Cruzadas",
+    subtitle: "Cinesiologia e Biomecânica",
+    description: "Revise os termos fundamentais de cinesiologia jogando.",
+    component: PalavrasCruzadas,
+  },
+  {
+    id: "super-trunfo",
+    title: "Super Trunfo",
+    subtitle: "Recursos Físicos",
+    description: "Jogue em dupla comparando atributos dos recursos de eletroterapia.",
+    component: SuperTrunfo,
+  },
 ];
 
 // Ferramentas externas — abrem em outra aba (ex.: artifacts publicados no Claude.ai)
@@ -581,6 +1156,13 @@ const EXTERNAL_TOOLS = [
     subtitle: "Raciocínio clínico",
     description: "Avalie casos clínicos simulados com IA e pratique seu diagnóstico.",
     url: "https://claude.ai/public/artifacts/0e215812-fa6f-484a-8c05-25e0c19801f6",
+  },
+  {
+    id: "prescricao-recurso",
+    title: "Prescrição de Recurso",
+    subtitle: "Recursos Físicos",
+    description: "Investigue o caso e prescreva o recurso e os parâmetros corretos.",
+    url: "https://claude.ai/public/artifacts/7a5fa9ee-4ebd-4457-8c83-653be336f4eb",
   },
 ];
 
@@ -691,7 +1273,7 @@ function CubeIcon({ size = 56 }) {
 function Home({ onSelect }) {
   return (
     <div className="min-h-screen w-full" style={{ background: "#F5F5F7" }}>
-      <div className="px-5 pt-8 pb-6 flex items-center justify-center gap-3">
+      <div className="px-5 pb-6 flex items-center justify-center gap-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 2.5rem)" }}>
         <CubeIcon size={56} />
         <div className="text-left">
           <h1 className="text-4xl leading-none" style={{ color: "#1D1D1F", fontFamily: "'Poppins', sans-serif", fontWeight: 800 }}>
