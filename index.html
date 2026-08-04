@@ -52,7 +52,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 function CadastroLogin() {
-  const [modo, setModo] = useState("cadastro"); // "cadastro" | "login"
+  const [modo, setModo] = useState("login"); // "cadastro" | "login"
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -60,7 +60,8 @@ function CadastroLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  function traduzErro(code) {
+  function traduzErro(e) {
+    const code = e && e.code;
     const mapa = {
       "auth/email-already-in-use": "Esse e-mail já tem cadastro. Tente fazer login.",
       "auth/invalid-email": "E-mail inválido.",
@@ -68,8 +69,12 @@ function CadastroLogin() {
       "auth/wrong-password": "Senha incorreta.",
       "auth/user-not-found": "Não encontramos cadastro com esse e-mail.",
       "auth/invalid-credential": "E-mail ou senha incorretos.",
+      "auth/unauthorized-domain": "Este domínio ainda não está autorizado no Firebase (Authentication → Settings → Authorized domains).",
+      "auth/operation-not-allowed": "Login por e-mail/senha não está habilitado no Firebase (Authentication → Sign-in method).",
+      "permission-denied": "Sem permissão para salvar no banco de dados (verifique as regras do Firestore).",
     };
-    return mapa[code] || "Não foi possível concluir. Tente novamente.";
+    if (mapa[code]) return mapa[code];
+    return "Não foi possível concluir (" + (code || (e && e.message) || "erro desconhecido") + "). Tente novamente.";
   }
 
   async function handleCadastro() {
@@ -89,7 +94,7 @@ function CadastroLogin() {
       });
       // já autenticado automaticamente — sem etapa de confirmação por e-mail
     } catch (e) {
-      setError(traduzErro(e.code));
+      setError(traduzErro(e));
     } finally {
       setLoading(false);
     }
@@ -105,7 +110,7 @@ function CadastroLogin() {
     try {
       await auth.signInWithEmailAndPassword(email.trim(), senha);
     } catch (e) {
-      setError(traduzErro(e.code));
+      setError(traduzErro(e));
     } finally {
       setLoading(false);
     }
