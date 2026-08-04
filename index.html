@@ -1128,7 +1128,7 @@ const TOOLS = [
   {
     id: "correntes",
     title: "Simulador de Correntes",
-    subtitle: "Eletroterapia",
+    subtitle: "Recursos Físicos",
     description: "Visualize tipos de corrente elétrica e seus parâmetros em tempo real.",
     component: SimuladorCorrentes,
   },
@@ -1153,7 +1153,7 @@ const EXTERNAL_TOOLS = [
   {
     id: "consultorio-virtual",
     title: "Consultório Virtual",
-    subtitle: "Raciocínio clínico",
+    subtitle: "Ortopedia e Traumatologia",
     description: "Avalie casos clínicos simulados com IA e pratique seu diagnóstico.",
     url: "https://claude.ai/public/artifacts/0e215812-fa6f-484a-8c05-25e0c19801f6",
   },
@@ -1165,6 +1165,19 @@ const EXTERNAL_TOOLS = [
     url: "https://claude.ai/public/artifacts/7a5fa9ee-4ebd-4457-8c83-653be336f4eb",
   },
 ];
+
+// Ordem de exibição por categoria de conteúdo — para adicionar uma nova
+// categoria, é só incluir o nome aqui na posição desejada.
+const CATEGORY_ORDER = ["Recursos Físicos", "Ortopedia e Traumatologia", "Cinesiologia e Biomecânica"];
+
+const ALL_TOOLS_SORTED = [
+  ...TOOLS.map((t) => ({ ...t, type: "internal" })),
+  ...EXTERNAL_TOOLS.map((t) => ({ ...t, type: "external" })),
+].sort((a, b) => {
+  const ia = CATEGORY_ORDER.indexOf(a.subtitle);
+  const ib = CATEGORY_ORDER.indexOf(b.subtitle);
+  return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+});
 
 function EmailIcon() {
   return (
@@ -1290,12 +1303,13 @@ function Home({ onSelect }) {
           Ferramentas
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {TOOLS.map((tool) => (
-            <ToolCard key={tool.id} tool={tool} onSelect={onSelect} />
-          ))}
-          {EXTERNAL_TOOLS.map((tool) => (
-            <ExternalToolCard key={tool.id} tool={tool} />
-          ))}
+          {ALL_TOOLS_SORTED.map((tool) =>
+            tool.type === "external" ? (
+              <ExternalToolCard key={tool.id} tool={tool} />
+            ) : (
+              <ToolCard key={tool.id} tool={tool} onSelect={onSelect} />
+            )
+          )}
         </div>
 
         <div className="mt-8 rounded-2xl p-6 text-center" style={{ background: "#1D1D1F" }}>
