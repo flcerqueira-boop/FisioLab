@@ -131,8 +131,19 @@ function CadastroLogin() {
             </p>
           </div>
         </div>
-        <p className="text-xs text-center mb-4" style={{ color: "#9A9AA0" }}>
+        <p className="text-xs text-center mb-2" style={{ color: "#9A9AA0" }}>
           Ambiente gratuito de estudo com simuladores, jogos e casos clínicos para alunos e professores de fisioterapia.
+        </p>
+        <p className="text-center mb-4">
+          <a
+            href="manual-professor.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium"
+            style={{ color: "#22C55E" }}
+          >
+            📄 Manual do Professor
+          </a>
         </p>
         <p className="text-sm text-center mb-5" style={{ color: "#6E6E73" }}>
           {modo === "cadastro" ? "Crie sua conta para começar" : "Entre na sua conta"}
@@ -1380,7 +1391,7 @@ const EXTERNAL_TOOLS = [
     title: "Prescrição de Recurso",
     subtitle: "Recursos Físicos",
     description: "Investigue o caso e prescreva o recurso e os parâmetros corretos.",
-    url: "https://claude.ai/public/artifacts/7a5fa9ee-4ebd-4457-8c83-653be336f4eb",
+    url: "https://claude.ai/public/artifacts/5b2b7871-573d-41b8-8351-e54809452cde",
   },
 ];
 
@@ -1494,14 +1505,17 @@ function ExternalToolCard({ tool, user }) {
           {tool.subtitle}
         </p>
         <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ color: "#6E6E73", background: "#F2F2F7" }}>
-          abre em outra aba
+          requer código do professor
         </span>
       </div>
       <h3 className="text-lg font-semibold mb-1" style={{ color: "#1D1D1F" }}>
         {tool.title} ↗
       </h3>
-      <p className="text-sm leading-relaxed" style={{ color: "#6E6E73" }}>
+      <p className="text-sm leading-relaxed mb-2" style={{ color: "#6E6E73" }}>
         {tool.description}
+      </p>
+      <p className="text-[11px] leading-snug" style={{ color: "#9A9AA0" }}>
+        💡 Toque e segure o card, depois escolha "Abrir em 2º Plano"
       </p>
     </a>
   );
@@ -1819,6 +1833,15 @@ function Home({ onSelect, user }) {
               style={{ background: "#22C55E", color: "#FFFFFF" }}
             >
               Conhecer a OrtoFlix →
+            </a>
+            <a
+              href="manual-professor.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-center text-sm font-medium px-5 py-2.5 rounded-full mb-3"
+              style={{ background: "#F5F5F7", color: "#1D1D1F", border: "1px solid #E5E5EA" }}
+            >
+              📄 Manual do Professor
             </a>
             <button
               onClick={() => setShowAbout(false)}
