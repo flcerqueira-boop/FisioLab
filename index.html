@@ -17,6 +17,9 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.7/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore-compat.js"></script>
 
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@800;900&family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap');
@@ -30,6 +33,199 @@
 
 <script type="text/babel" data-presets="react">
 const { useState, useRef, useEffect } = React;
+
+/* =========================================================================
+   FIREBASE — cadastro/login (liberação automática, sem confirmação por
+   e-mail) e coleta de leads (nome, e-mail, perfil aluno/professor).
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyC29uyLP3YS-VMs8aFEwYe4qbgblGGP8eY",
+  authDomain: "fisiolab-a4835.firebaseapp.com",
+  projectId: "fisiolab-a4835",
+  storageBucket: "fisiolab-a4835.firebasestorage.app",
+  messagingSenderId: "395561821532",
+  appId: "1:395561821532:web:6a33520680d6f2df830d99",
+  measurementId: "G-VZLR1G737C",
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+function CadastroLogin() {
+  const [modo, setModo] = useState("cadastro"); // "cadastro" | "login"
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [perfil, setPerfil] = useState("aluno"); // "aluno" | "professor"
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  function traduzErro(code) {
+    const mapa = {
+      "auth/email-already-in-use": "Esse e-mail já tem cadastro. Tente fazer login.",
+      "auth/invalid-email": "E-mail inválido.",
+      "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres.",
+      "auth/wrong-password": "Senha incorreta.",
+      "auth/user-not-found": "Não encontramos cadastro com esse e-mail.",
+      "auth/invalid-credential": "E-mail ou senha incorretos.",
+    };
+    return mapa[code] || "Não foi possível concluir. Tente novamente.";
+  }
+
+  async function handleCadastro() {
+    setError("");
+    if (!nome.trim() || !email.trim() || !senha) {
+      setError("Preencha nome, e-mail e senha.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const cred = await auth.createUserWithEmailAndPassword(email.trim(), senha);
+      await db.collection("usuarios").doc(cred.user.uid).set({
+        nome: nome.trim(),
+        email: email.trim(),
+        perfil,
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      // já autenticado automaticamente — sem etapa de confirmação por e-mail
+    } catch (e) {
+      setError(traduzErro(e.code));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleLogin() {
+    setError("");
+    if (!email.trim() || !senha) {
+      setError("Preencha e-mail e senha.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await auth.signInWithEmailAndPassword(email.trim(), senha);
+    } catch (e) {
+      setError(traduzErro(e.code));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center p-5" style={{ background: "#F5F5F7" }}>
+      <div className="max-w-sm w-full rounded-2xl p-6" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+        <h1 className="text-2xl mb-1" style={{ color: "#1D1D1F", fontFamily: "'Poppins', sans-serif", fontWeight: 800 }}>
+          Fisio<span style={{ color: "#22C55E" }}>Lab</span>
+        </h1>
+        <p className="text-sm mb-5" style={{ color: "#6E6E73" }}>
+          {modo === "cadastro" ? "Crie sua conta para começar" : "Entre na sua conta"}
+        </p>
+
+        {modo === "cadastro" && (
+          <div className="mb-3">
+            <label className="text-xs font-medium block mb-1" style={{ color: "#6E6E73" }}>Nome</label>
+            <input
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
+              style={{ borderColor: "#E5E5EA" }}
+            />
+          </div>
+        )}
+
+        <div className="mb-3">
+          <label className="text-xs font-medium block mb-1" style={{ color: "#6E6E73" }}>E-mail</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
+            style={{ borderColor: "#E5E5EA" }}
+          />
+        </div>
+
+        <div className="mb-3">
+          <label className="text-xs font-medium block mb-1" style={{ color: "#6E6E73" }}>Senha</label>
+          <input
+            type="password"
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && (modo === "cadastro" ? handleCadastro() : handleLogin())}
+            className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
+            style={{ borderColor: "#E5E5EA" }}
+          />
+        </div>
+
+        {modo === "cadastro" && (
+          <div className="mb-4">
+            <label className="text-xs font-medium block mb-1" style={{ color: "#6E6E73" }}>Você é...</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPerfil("aluno")}
+                className="flex-1 py-2 rounded-lg text-sm font-medium"
+                style={perfil === "aluno" ? { background: "#22C55E", color: "#FFFFFF" } : { background: "#F5F5F7", color: "#6E6E73", border: "1px solid #E5E5EA" }}
+              >
+                Estudante
+              </button>
+              <button
+                onClick={() => setPerfil("professor")}
+                className="flex-1 py-2 rounded-lg text-sm font-medium"
+                style={perfil === "professor" ? { background: "#22C55E", color: "#FFFFFF" } : { background: "#F5F5F7", color: "#6E6E73", border: "1px solid #E5E5EA" }}
+              >
+                Professor
+              </button>
+            </div>
+          </div>
+        )}
+
+        {error && <p className="text-xs mb-3" style={{ color: "#EF4444" }}>{error}</p>}
+
+        <button
+          onClick={modo === "cadastro" ? handleCadastro : handleLogin}
+          disabled={loading}
+          className="w-full py-2.5 rounded-full text-sm font-semibold disabled:opacity-50"
+          style={{ background: "#22C55E", color: "#FFFFFF" }}
+        >
+          {loading ? "Aguarde..." : modo === "cadastro" ? "Criar conta" : "Entrar"}
+        </button>
+
+        <button
+          onClick={() => { setModo(modo === "cadastro" ? "login" : "cadastro"); setError(""); }}
+          className="w-full text-center text-xs mt-4"
+          style={{ color: "#6E6E73" }}
+        >
+          {modo === "cadastro" ? "Já tem conta? Entrar" : "Não tem conta? Criar agora"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AuthGate() {
+  const [status, setStatus] = useState("loading"); // "loading" | "out" | "in"
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setStatus(user ? "in" : "out");
+    });
+    return unsubscribe;
+  }, []);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center" style={{ background: "#F5F5F7" }}>
+        <p className="text-sm" style={{ color: "#6E6E73" }}>Carregando...</p>
+      </div>
+    );
+  }
+
+  if (status === "out") {
+    return <CadastroLogin />;
+  }
+
+  return <App />;
+}
+
 
 /* =========================================================================
    Design: painel de aparelho de eletroestimulação — tela tipo osciloscópio
@@ -1298,6 +1494,16 @@ function Home({ onSelect }) {
         </div>
       </div>
 
+      <div className="text-center -mt-3 mb-2">
+        <button
+          onClick={() => auth.signOut()}
+          className="text-xs"
+          style={{ color: "#9A9AA0" }}
+        >
+          Sair da conta
+        </button>
+      </div>
+
       <div className="px-5 pb-6 max-w-2xl mx-auto">
         <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: "#6E6E73" }}>
           Ferramentas
@@ -1351,7 +1557,7 @@ function App() {
   return <ToolComponent onBack={() => setSelected(null)} />;
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+ReactDOM.createRoot(document.getElementById("root")).render(<AuthGate />);
 </script>
 
 <script>
