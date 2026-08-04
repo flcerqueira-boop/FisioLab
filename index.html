@@ -117,7 +117,7 @@ function CadastroLogin() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-5" style={{ background: "#F5F5F7" }}>
+    <div className="min-h-screen w-full flex flex-col items-center justify-center p-5" style={{ background: "#F5F5F7" }}>
       <div className="max-w-sm w-full rounded-2xl p-6" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
         <div className="flex items-center justify-center gap-3 mb-2">
           <CubeIcon size={48} />
@@ -130,6 +130,9 @@ function CadastroLogin() {
             </p>
           </div>
         </div>
+        <p className="text-xs text-center mb-4" style={{ color: "#9A9AA0" }}>
+          Ambiente gratuito de estudo com simuladores, jogos e casos clínicos para alunos e professores de fisioterapia.
+        </p>
         <p className="text-sm text-center mb-5" style={{ color: "#6E6E73" }}>
           {modo === "cadastro" ? "Crie sua conta para começar" : "Entre na sua conta"}
         </p>
@@ -209,6 +212,9 @@ function CadastroLogin() {
         >
           {modo === "cadastro" ? "Já tem conta? Entrar" : "Não tem conta? Criar agora"}
         </button>
+      </div>
+      <div className="max-w-sm w-full">
+        <ContactFooter />
       </div>
     </div>
   );
@@ -1493,6 +1499,11 @@ function CubeIcon({ size = 56 }) {
 }
 
 function Home({ onSelect }) {
+  const [showAbout, setShowAbout] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
+  const [installTab, setInstallTab] = useState(
+    /iPhone|iPad|iPod/.test(navigator.userAgent) ? "ios" : "android"
+  );
   return (
     <div className="min-h-screen w-full" style={{ background: "#F5F5F7" }}>
       <div className="px-5 pb-6 flex items-center justify-center gap-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 2.5rem)" }}>
@@ -1507,7 +1518,23 @@ function Home({ onSelect }) {
         </div>
       </div>
 
-      <div className="text-center -mt-3 mb-2">
+      <div className="text-center -mt-3 mb-2 flex items-center justify-center gap-3">
+        <button
+          onClick={() => setShowAbout(true)}
+          className="text-xs"
+          style={{ color: "#9A9AA0" }}
+        >
+          Sobre
+        </button>
+        <span style={{ color: "#D2D2D7" }}>·</span>
+        <button
+          onClick={() => setShowInstall(true)}
+          className="text-xs"
+          style={{ color: "#9A9AA0" }}
+        >
+          Instalar app
+        </button>
+        <span style={{ color: "#D2D2D7" }}>·</span>
         <button
           onClick={() => auth.signOut()}
           className="text-xs"
@@ -1516,6 +1543,117 @@ function Home({ onSelect }) {
           Sair da conta
         </button>
       </div>
+
+      {showInstall && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-5"
+          style={{ background: "rgba(29,29,31,0.5)" }}
+          onClick={() => setShowInstall(false)}
+        >
+          <div
+            className="max-w-sm w-full rounded-2xl p-6"
+            style={{ background: "#FFFFFF" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-3" style={{ color: "#1D1D1F" }}>
+              Instalar o FisioLab
+            </h3>
+
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setInstallTab("ios")}
+                className="flex-1 py-2 rounded-lg text-sm font-medium"
+                style={installTab === "ios" ? { background: "#22C55E", color: "#FFFFFF" } : { background: "#F5F5F7", color: "#6E6E73", border: "1px solid #E5E5EA" }}
+              >
+                iPhone
+              </button>
+              <button
+                onClick={() => setInstallTab("android")}
+                className="flex-1 py-2 rounded-lg text-sm font-medium"
+                style={installTab === "android" ? { background: "#22C55E", color: "#FFFFFF" } : { background: "#F5F5F7", color: "#6E6E73", border: "1px solid #E5E5EA" }}
+              >
+                Android
+              </button>
+            </div>
+
+            {installTab === "ios" ? (
+              <ol className="text-sm leading-relaxed space-y-2 mb-5" style={{ color: "#1D1D1F" }}>
+                <li>1. Abra o FisioLab no <strong>Safari</strong>.</li>
+                <li>2. Toque no ícone de compartilhar (o quadrado com a seta pra cima), na barra do navegador.</li>
+                <li>3. Role para baixo e toque em <strong>"Adicionar à Tela de Início"</strong>.</li>
+                <li>4. Toque em <strong>"Adicionar"</strong> no canto superior direito.</li>
+              </ol>
+            ) : (
+              <ol className="text-sm leading-relaxed space-y-2 mb-5" style={{ color: "#1D1D1F" }}>
+                <li>1. Abra o FisioLab no <strong>Chrome</strong>.</li>
+                <li>2. Toque nos três pontinhos (⋮) no canto superior direito.</li>
+                <li>3. Toque em <strong>"Adicionar à tela inicial"</strong> (ou "Instalar app").</li>
+                <li>4. Confirme tocando em <strong>"Adicionar"</strong> ou <strong>"Instalar"</strong>.</li>
+              </ol>
+            )}
+
+            <p className="text-xs mb-4" style={{ color: "#9A9AA0" }}>
+              Depois disso, o ícone do FisioLab fica na sua tela inicial, igual a um aplicativo normal.
+            </p>
+
+            <button
+              onClick={() => setShowInstall(false)}
+              className="w-full text-center text-xs"
+              style={{ color: "#9A9AA0" }}
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showAbout && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-5"
+          style={{ background: "rgba(29,29,31,0.5)" }}
+          onClick={() => setShowAbout(false)}
+        >
+          <div
+            className="max-w-sm w-full rounded-2xl p-6"
+            style={{ background: "#FFFFFF" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm leading-relaxed mb-3" style={{ color: "#1D1D1F" }}>
+              Olá! Eu sou o Prof. Felipe Cerqueira, fisioterapeuta, professor
+              e diretor da OrtoFlix.
+            </p>
+            <p className="text-sm leading-relaxed mb-3" style={{ color: "#1D1D1F" }}>
+              Criei o FisioLab para reunir ferramentas que ajudam no
+              aprendizado da fisioterapia de forma prática e interativa. A
+              ideia é oferecer recursos que eu gostaria que todos os meus
+              alunos tivessem à disposição durante a graduação, mas que
+              também podem ser úteis para professores e profissionais.
+            </p>
+            <p className="text-sm leading-relaxed mb-5" style={{ color: "#1D1D1F" }}>
+              O FisioLab faz parte da OrtoFlix, uma plataforma que desenvolvi
+              para compartilhar conhecimento em fisioterapia ortopédica. Se
+              quiser conhecer um pouco mais sobre esse projeto, basta clicar
+              abaixo.
+            </p>
+            <a
+              href="https://ortoflix.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-center text-sm font-semibold px-5 py-2.5 rounded-full mb-3"
+              style={{ background: "#22C55E", color: "#FFFFFF" }}
+            >
+              Conhecer a OrtoFlix →
+            </a>
+            <button
+              onClick={() => setShowAbout(false)}
+              className="w-full text-center text-xs"
+              style={{ color: "#9A9AA0" }}
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="px-5 pb-6 max-w-2xl mx-auto">
         <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: "#6E6E73" }}>
