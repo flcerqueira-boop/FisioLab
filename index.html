@@ -1642,6 +1642,7 @@ const TOOLS = [
     subtitle: "Cinesiologia e Biomecânica",
     description: "Ajuste forças e braços de alavanca e veja o torque e a contração resultante.",
     component: VisualizadorAlavancas,
+    locked: true,
   },
 ];
 
@@ -1739,22 +1740,88 @@ function logAcesso(user, tool) {
 }
 
 function ToolCard({ tool, onSelect, user }) {
+  const { useState } = React;
+  const [showLock, setShowLock] = useState(false);
+  const [pass, setPass] = useState("");
+  const [passError, setPassError] = useState("");
+
+  function handleClick() {
+    if (tool.locked) {
+      setShowLock(true);
+    } else {
+      logAcesso(user, tool);
+      onSelect(tool.id);
+    }
+  }
+
+  function tryUnlock() {
+    if (pass === ADMIN_PASSCODE) {
+      setShowLock(false);
+      setPass("");
+      setPassError("");
+      logAcesso(user, tool);
+      onSelect(tool.id);
+    } else {
+      setPassError("Senha incorreta.");
+    }
+  }
+
   return (
-    <button
-      onClick={() => { logAcesso(user, tool); onSelect(tool.id); }}
-      className="text-left rounded-2xl p-5 w-full transition-shadow hover:shadow-md"
-      style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}
-    >
-      <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "#22C55E" }}>
-        {tool.subtitle}
-      </p>
-      <h3 className="text-lg font-semibold mb-1" style={{ color: "#1D1D1F" }}>
-        {tool.title}
-      </h3>
-      <p className="text-sm leading-relaxed" style={{ color: "#6E6E73" }}>
-        {tool.description}
-      </p>
-    </button>
+    <>
+      <button
+        onClick={handleClick}
+        className="text-left rounded-2xl p-5 w-full transition-shadow hover:shadow-md relative"
+        style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}
+      >
+        {tool.locked && (
+          <span
+            className="absolute top-3 right-3 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+            style={{ background: "#FEF3C7", color: "#92400E" }}
+          >
+            Em breve
+          </span>
+        )}
+        <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "#22C55E" }}>
+          {tool.subtitle}
+        </p>
+        <h3 className="text-lg font-semibold mb-1" style={{ color: "#1D1D1F" }}>
+          {tool.title}
+        </h3>
+        <p className="text-sm leading-relaxed" style={{ color: "#6E6E73" }}>
+          {tool.description}
+        </p>
+      </button>
+
+      {showLock && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-5"
+          style={{ background: "rgba(29,29,31,0.5)" }}
+          onClick={() => { setShowLock(false); setPass(""); setPassError(""); }}
+        >
+          <div
+            className="max-w-xs w-full rounded-2xl p-5"
+            style={{ background: "#FFFFFF" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-semibold mb-1" style={{ color: "#1D1D1F" }}>Em desenvolvimento</p>
+            <p className="text-xs mb-3" style={{ color: "#6E6E73" }}>Essa ferramenta ainda está em testes. Digite a senha para acessar.</p>
+            <input
+              type="password"
+              value={pass}
+              onChange={(e) => setPass(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && tryUnlock()}
+              className="w-full rounded-lg px-3 py-2 text-sm border outline-none mb-2"
+              style={{ borderColor: "#E5E5EA" }}
+              autoFocus
+            />
+            {passError && <p className="text-xs mb-2" style={{ color: "#EF4444" }}>{passError}</p>}
+            <button onClick={tryUnlock} className="w-full py-2 rounded-full text-sm font-semibold" style={{ background: "#22C55E", color: "#FFFFFF" }}>
+              Entrar
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
