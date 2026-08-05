@@ -1340,51 +1340,50 @@ function SuperTrunfo({ onBack }) {
    VISUALIZADOR DE ALAVANCAS E TORQUE — Cinesiologia e Biomecânica
    ========================================================================= */
 
-const ALAVANCA_EXEMPLOS = {
-  "1": {
-    nome: "1ª classe (Interfixa)",
-    ordem: "FP — Eixo — FR",
+const ALAVANCA_INFO = {
+  interfixa: {
+    nome: "Interfixa",
     exemplo: "Extensão de cotovelo pelo tríceps: o eixo (cotovelo) fica entre a força da potência (tríceps) e a força da resistência (antebraço/carga).",
   },
-  "2": {
-    nome: "2ª classe (Inter-resistente)",
-    ordem: "Eixo — FR — FP",
+  "inter-resistente": {
+    nome: "Inter-resistente",
     exemplo: "Elevação de calcanhares (panturrilha): a força da resistência (peso corporal) fica entre o eixo (antepé) e a força da potência (tríceps sural).",
   },
-  "3": {
-    nome: "3ª classe (Interpotente)",
-    ordem: "Eixo — FP — FR",
-    exemplo: "Flexão de cotovelo pelo bíceps: a força da potência (bíceps) fica entre o eixo (cotovelo) e a força da resistência (mão/carga). É a classe mais comum no corpo humano.",
+  interpotente: {
+    nome: "Interpotente",
+    exemplo: "Flexão de cotovelo pelo bíceps: a força da potência (bíceps) fica entre o eixo (cotovelo) e a força da resistência (mão/carga). É a mais comum no corpo humano.",
   },
 };
 
+function classificarAlavanca(posEixo, posPotencia, posResistencia) {
+  const pontos = [
+    { key: "interfixa", pos: posEixo },
+    { key: "inter-resistente", pos: posResistencia },
+    { key: "interpotente", pos: posPotencia },
+  ];
+  const ordenados = [...pontos].sort((a, b) => a.pos - b.pos);
+  return ordenados[1].key;
+}
+
 function VisualizadorAlavancas({ onBack }) {
-  const { useState, useEffect } = React;
-  const [classe, setClasse] = useState("3");
+  const { useState } = React;
+  const [posEixo, setPosEixo] = useState(10);
+  const [posPotencia, setPosPotencia] = useState(30);
+  const [posResistencia, setPosResistencia] = useState(90);
   const [forcaPotencia, setForcaPotencia] = useState(40);
   const [forcaResistencia, setForcaResistencia] = useState(20);
-  const [bracoPotencia, setBracoPotencia] = useState(15);
-  const [bracoResistencia, setBracoResistencia] = useState(30);
-  const [travar, setTravar] = useState("nenhum"); // "nenhum" | "forca" | "braco"
+  const [travar, setTravar] = useState("nenhum"); // "nenhum" | "forca" | "posicao"
 
-  // Nas classes 2 e 3, a posição de FR/FP em relação ao eixo é uma
-  // característica estrutural da própria classe (quem fica "por dentro"),
-  // não uma escolha livre — por isso, ao trocar de classe, ajustamos os
-  // braços para manter essa ordem fisicamente correta.
-  useEffect(() => {
-    if (classe === "2" && bracoResistencia >= bracoPotencia) {
-      setBracoResistencia(Math.max(1, Math.floor(bracoPotencia / 2)));
-    }
-    if (classe === "3" && bracoPotencia >= bracoResistencia) {
-      setBracoPotencia(Math.max(1, Math.floor(bracoResistencia / 2)));
-    }
-    // eslint-disable-next-line
-  }, [classe]);
+  const bracoPotencia = Math.abs(posPotencia - posEixo);
+  const bracoResistencia = Math.abs(posResistencia - posEixo);
 
   const torquePotencia = forcaPotencia * bracoPotencia;
   const torqueResistencia = forcaResistencia * bracoResistencia;
-  const vantagemMecanica = bracoPotencia / bracoResistencia;
+  const vantagemMecanica = bracoResistencia > 0 ? bracoPotencia / bracoResistencia : Infinity;
   const diff = torquePotencia - torqueResistencia;
+
+  const classeAtual = classificarAlavanca(posEixo, posPotencia, posResistencia);
+  const info = ALAVANCA_INFO[classeAtual];
 
   let resultado, corResultado, contracao;
   const EPS = torqueResistencia * 0.03;
@@ -1402,42 +1401,25 @@ function VisualizadorAlavancas({ onBack }) {
     corResultado = "#EF4444";
   }
 
-  const anguloMax = 22;
+  const anguloMax = 18;
   const escala = Math.max(torquePotencia, torqueResistencia, 1);
   const angulo = Math.max(-anguloMax, Math.min(anguloMax, (diff / escala) * anguloMax));
 
-  const exemplo = ALAVANCA_EXEMPLOS[classe];
+  // ---- geometria: barra fixa de 100 cm, mapeada para -110..+110 px ----
+  const BAR_PX = 220;
+  const pxOf = (cm) => -110 + (cm / 100) * BAR_PX;
+  const eixoPx = pxOf(posEixo);
+  const potenciaPx = pxOf(posPotencia);
+  const resistenciaPx = pxOf(posResistencia);
 
-  // ---- geometria da barra por classe ----
-  let eixoX, potenciaX, resistenciaX, bracoMaxP, bracoMaxR;
-  if (classe === "1") {
-    eixoX = 0;
-    bracoMaxP = 110;
-    bracoMaxR = 110;
-    potenciaX = -Math.min(bracoPotencia, bracoMaxP);
-    resistenciaX = Math.min(bracoResistencia, bracoMaxR);
-  } else if (classe === "2") {
-    eixoX = -110;
-    bracoMaxP = 220;
-    bracoMaxR = Math.max(2, bracoPotencia - 1);
-    resistenciaX = eixoX + Math.min(bracoResistencia, bracoMaxR);
-    potenciaX = eixoX + Math.min(bracoPotencia, bracoMaxP);
-  } else {
-    eixoX = -110;
-    bracoMaxR = 220;
-    bracoMaxP = Math.max(2, bracoResistencia - 1);
-    potenciaX = eixoX + Math.min(bracoPotencia, bracoMaxP);
-    resistenciaX = eixoX + Math.min(bracoResistencia, bracoMaxR);
-  }
+  const arrowLen = (forca) => 20 + Math.min(48, forca * 0.48);
 
-  const arrowLen = (forca) => 22 + Math.min(55, forca * 0.55);
-
-  function Slider({ label, value, onChange, min, max, disabled, unidade }) {
+  function Slider({ label, value, onChange, min, max, disabled, unidade, accent }) {
     return (
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
           <label className="text-xs font-medium" style={{ color: disabled ? "#C7C7CC" : "#6E6E73" }}>{label}</label>
-          <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: disabled ? "#F5F5F7" : "#EAFBF0", color: disabled ? "#C7C7CC" : "#16A34A" }}>
+          <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: disabled ? "#F5F5F7" : "#EAFBF0", color: disabled ? "#C7C7CC" : (accent || "#16A34A") }}>
             {value} {unidade}
           </span>
         </div>
@@ -1445,11 +1427,11 @@ function VisualizadorAlavancas({ onBack }) {
           type="range"
           min={min}
           max={max}
-          value={Math.min(value, max)}
+          value={value}
           disabled={disabled}
           onChange={(e) => onChange(Number(e.target.value))}
           className="w-full"
-          style={{ accentColor: "#22C55E", opacity: disabled ? 0.4 : 1 }}
+          style={{ accentColor: accent || "#22C55E", opacity: disabled ? 0.4 : 1 }}
         />
       </div>
     );
@@ -1477,34 +1459,26 @@ function VisualizadorAlavancas({ onBack }) {
       </div>
 
       <div className="p-4 max-w-md mx-auto">
-        {/* Classe da alavanca */}
-        <div className="flex gap-2 mb-4">
-          {["1", "2", "3"].map((c) => (
-            <button
-              key={c}
-              onClick={() => setClasse(c)}
-              className="flex-1 py-2 rounded-lg text-xs font-semibold leading-tight"
-              style={classe === c ? { background: "#22C55E", color: "#FFFFFF" } : { background: "#FFFFFF", color: "#6E6E73", border: "1px solid #E5E5EA" }}
-            >
-              {ALAVANCA_EXEMPLOS[c].nome}
-            </button>
-          ))}
+        {/* Classificação — resultado automático, não mais uma escolha */}
+        <div className="rounded-2xl px-4 py-3 mb-4 text-center" style={{ background: "#EAFBF0", border: "1px solid #BBF7D0" }}>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#16A34A" }}>Classificação atual</p>
+          <p className="text-lg font-bold" style={{ color: "#15803D" }}>{info.nome}</p>
         </div>
 
-        {/* Diagrama SVG — fixo durante a rolagem */}
+        {/* Diagrama SVG — fixo durante a rolagem, barra de 100cm */}
         <div className="rounded-2xl p-4 mb-4 sticky top-2 z-10" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA", boxShadow: "0 4px 16px rgba(0,0,0,0.06)" }}>
-          <svg viewBox="-150 -110 300 175" width="100%" height="190">
+          <svg viewBox="-150 -145 300 280" width="100%" height="230">
             <defs>
-              <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="barGrad2" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#E4E4E7" />
                 <stop offset="45%" stopColor="#B8BAC0" />
                 <stop offset="55%" stopColor="#9A9CA3" />
                 <stop offset="100%" stopColor="#6E7078" />
               </linearGradient>
-              <marker id="arrowBlue" markerWidth="9" markerHeight="9" refX="4.5" refY="4.5" orient="auto">
+              <marker id="arrowBlue2" markerWidth="9" markerHeight="9" refX="4.5" refY="4.5" orient="auto">
                 <path d="M0,0 L9,4.5 L0,9 Z" fill="#2563EB" />
               </marker>
-              <marker id="arrowRed" markerWidth="9" markerHeight="9" refX="4.5" refY="4.5" orient="auto">
+              <marker id="arrowRed2" markerWidth="9" markerHeight="9" refX="4.5" refY="4.5" orient="auto">
                 <path d="M0,0 L9,4.5 L0,9 Z" fill="#EF4444" />
               </marker>
             </defs>
@@ -1512,51 +1486,35 @@ function VisualizadorAlavancas({ onBack }) {
             {/* chão de referência */}
             <line x1="-150" y1="46" x2="150" y2="46" stroke="#E5E5EA" strokeWidth="2" />
 
-            <g transform={`rotate(${-angulo})`}>
-              {/* barra com volume */}
-              <rect
-                x={classe === "1" ? -122 : eixoX - 10}
-                y="-5"
-                width={classe === "1" ? 244 : 250}
-                height="10"
-                rx="5"
-                fill="url(#barGrad)"
-                stroke="#5A5C63"
-                strokeWidth="1"
-              />
+            <g transform={`rotate(${-angulo} ${eixoPx} 0)`}>
+              {/* barra fixa de 100 cm */}
+              <rect x="-110" y="-5" width="220" height="10" rx="5" fill="url(#barGrad2)" stroke="#5A5C63" strokeWidth="1" />
+
+              {/* marcações de 0 e 100 cm nas pontas */}
+              <text x="-110" y="20" textAnchor="middle" fontSize="9" fill="#B0B0B5">0cm</text>
+              <text x="110" y="20" textAnchor="middle" fontSize="9" fill="#B0B0B5">100cm</text>
 
               {/* seta FP — sempre azul, sempre para cima */}
-              <line x1={potenciaX} y1="-5" x2={potenciaX} y2={-5 - arrowLen(forcaPotencia)} stroke="#2563EB" strokeWidth="5" markerEnd="url(#arrowBlue)" strokeLinecap="round" />
-              <circle cx={potenciaX} cy="0" r="6" fill="#2563EB" stroke="#FFFFFF" strokeWidth="1.5" />
-              <text x={potenciaX} y={-5 - arrowLen(forcaPotencia) - 10} textAnchor="middle" fontSize="12" fill="#2563EB" fontWeight="700">
-                FP
-              </text>
-              <text x={potenciaX} y={-5 - arrowLen(forcaPotencia) - 22} textAnchor="middle" fontSize="10" fill="#2563EB">
-                {forcaPotencia} Kgf
-              </text>
+              <line x1={potenciaPx} y1="-5" x2={potenciaPx} y2={-5 - arrowLen(forcaPotencia)} stroke="#2563EB" strokeWidth="5" markerEnd="url(#arrowBlue2)" strokeLinecap="round" />
+              <circle cx={potenciaPx} cy="0" r="6" fill="#2563EB" stroke="#FFFFFF" strokeWidth="1.5" />
+              <text x={potenciaPx} y={-5 - arrowLen(forcaPotencia) - 9} textAnchor="middle" fontSize="12" fill="#2563EB" fontWeight="700">FP</text>
+              <text x={potenciaPx} y={-5 - arrowLen(forcaPotencia) - 21} textAnchor="middle" fontSize="10" fill="#2563EB">{forcaPotencia} Kgf</text>
 
               {/* seta FR — sempre vermelha, sempre para baixo */}
-              <line x1={resistenciaX} y1="5" x2={resistenciaX} y2={5 + arrowLen(forcaResistencia)} stroke="#EF4444" strokeWidth="5" markerEnd="url(#arrowRed)" strokeLinecap="round" />
-              <circle cx={resistenciaX} cy="0" r="6" fill="#EF4444" stroke="#FFFFFF" strokeWidth="1.5" />
-              <text x={resistenciaX} y={5 + arrowLen(forcaResistencia) + 16} textAnchor="middle" fontSize="12" fill="#EF4444" fontWeight="700">
-                FR
-              </text>
-              <text x={resistenciaX} y={5 + arrowLen(forcaResistencia) + 28} textAnchor="middle" fontSize="10" fill="#EF4444">
-                {forcaResistencia} Kgf
-              </text>
-            </g>
+              <line x1={resistenciaPx} y1="5" x2={resistenciaPx} y2={5 + arrowLen(forcaResistencia)} stroke="#EF4444" strokeWidth="5" markerEnd="url(#arrowRed2)" strokeLinecap="round" />
+              <circle cx={resistenciaPx} cy="0" r="6" fill="#EF4444" stroke="#FFFFFF" strokeWidth="1.5" />
+              <text x={resistenciaPx} y={5 + arrowLen(forcaResistencia) + 15} textAnchor="middle" fontSize="12" fill="#EF4444" fontWeight="700">FR</text>
+              <text x={resistenciaPx} y={5 + arrowLen(forcaResistencia) + 27} textAnchor="middle" fontSize="10" fill="#EF4444">{forcaResistencia} Kgf</text>
 
-            {/* eixo — símbolo de apoio fixo (triângulo + hachurado técnico) */}
-            <polygon points={`${eixoX},32 ${eixoX - 13},54 ${eixoX + 13},54`} fill="#1D1D1F" />
-            <line x1={eixoX - 18} y1="54" x2={eixoX + 18} y2="54" stroke="#1D1D1F" strokeWidth="2.5" />
-            {[-15, -8, -1, 6, 13].map((dx) => (
-              <line key={dx} x1={eixoX + dx} y1="54" x2={eixoX + dx - 6} y2="64" stroke="#1D1D1F" strokeWidth="1.5" />
-            ))}
-            <text x={eixoX} y="78" textAnchor="middle" fontSize="12" fill="#1D1D1F" fontWeight="700">E</text>
+              {/* eixo — símbolo de apoio fixo, posicionado dinamicamente */}
+              <polygon points={`${eixoPx},32 ${eixoPx - 13},54 ${eixoPx + 13},54`} fill="#1D1D1F" />
+              <line x1={eixoPx - 18} y1="54" x2={eixoPx + 18} y2="54" stroke="#1D1D1F" strokeWidth="2.5" />
+              {[-15, -8, -1, 6, 13].map((dx) => (
+                <line key={dx} x1={eixoPx + dx} y1="54" x2={eixoPx + dx - 6} y2="64" stroke="#1D1D1F" strokeWidth="1.5" />
+              ))}
+              <text x={eixoPx} y="78" textAnchor="middle" fontSize="12" fill="#1D1D1F" fontWeight="700">E</text>
+            </g>
           </svg>
-          <p className="text-center text-xs mt-1" style={{ color: "#9A9AA0" }}>
-            {exemplo.ordem}
-          </p>
         </div>
 
         {/* Resultado */}
@@ -1577,7 +1535,10 @@ function VisualizadorAlavancas({ onBack }) {
           </div>
           <div className="pt-3 mt-3" style={{ borderTop: "1px solid #3A3A3D" }}>
             <p className="text-xs" style={{ color: "#A1A1A6" }}>
-              Vantagem mecânica: <strong style={{ color: "#FFFFFF" }}>{vantagemMecanica.toFixed(2)}</strong>{" "}
+              Braço de FP: <strong style={{ color: "#FFFFFF" }}>{bracoPotencia} cm</strong> · Braço de FR: <strong style={{ color: "#FFFFFF" }}>{bracoResistencia} cm</strong>
+            </p>
+            <p className="text-xs mt-1" style={{ color: "#A1A1A6" }}>
+              Vantagem mecânica: <strong style={{ color: "#FFFFFF" }}>{Number.isFinite(vantagemMecanica) ? vantagemMecanica.toFixed(2) : "—"}</strong>{" "}
               ({vantagemMecanica >= 1 ? "vantagem — precisa de menos força" : "desvantagem — precisa de mais força"})
             </p>
           </div>
@@ -1586,9 +1547,9 @@ function VisualizadorAlavancas({ onBack }) {
         {/* Exemplo clínico */}
         <div className="rounded-2xl p-4 mb-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
           <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "#22C55E" }}>
-            Exemplo no corpo humano — {exemplo.nome}
+            Exemplo no corpo humano — {info.nome}
           </p>
-          <p className="text-sm leading-relaxed" style={{ color: "#1D1D1F" }}>{exemplo.exemplo}</p>
+          <p className="text-sm leading-relaxed" style={{ color: "#1D1D1F" }}>{info.exemplo}</p>
         </div>
 
         {/* Modo de exploração */}
@@ -1598,7 +1559,7 @@ function VisualizadorAlavancas({ onBack }) {
             {[
               { id: "nenhum", label: "Tudo livre" },
               { id: "forca", label: "Travar força" },
-              { id: "braco", label: "Travar braço" },
+              { id: "posicao", label: "Travar posição" },
             ].map((m) => (
               <button
                 key={m.id}
@@ -1612,20 +1573,26 @@ function VisualizadorAlavancas({ onBack }) {
           </div>
         </div>
 
-        {/* Controles */}
+        {/* Controles de posição (barra fixa de 100cm) */}
+        <div className="rounded-2xl p-4 mb-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9A9AA0" }}>Posição na barra (0 a 100 cm)</p>
+          <Slider label="Posição do Eixo (E)" value={posEixo} onChange={setPosEixo} min={0} max={100} unidade="cm" disabled={travar === "posicao"} accent="#1D1D1F" />
+          <Slider label="Posição de FP" value={posPotencia} onChange={setPosPotencia} min={0} max={100} unidade="cm" disabled={travar === "posicao"} accent="#2563EB" />
+          <Slider label="Posição de FR" value={posResistencia} onChange={setPosResistencia} min={0} max={100} unidade="cm" disabled={travar === "posicao"} accent="#EF4444" />
+        </div>
+
+        {/* Controles de força */}
         <div className="rounded-2xl p-4 mb-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
           <Slider label="Força da Potência (FP)" value={forcaPotencia} onChange={setForcaPotencia} min={1} max={100} unidade="Kgf" disabled={travar === "forca"} />
           <Slider label="Força da Resistência (FR)" value={forcaResistencia} onChange={setForcaResistencia} min={1} max={100} unidade="Kgf" disabled={travar === "forca"} />
-          <Slider label="Braço de FP" value={bracoPotencia} onChange={setBracoPotencia} min={1} max={Math.min(bracoMaxP, 100)} unidade="cm" disabled={travar === "braco"} />
-          <Slider label="Braço de FR" value={bracoResistencia} onChange={setBracoResistencia} min={1} max={Math.min(bracoMaxR, 100)} unidade="cm" disabled={travar === "braco"} />
         </div>
 
         {/* Notas educacionais */}
         <div className="rounded-2xl p-4 mb-4 space-y-2" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
           <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#22C55E" }}>Por que isso importa</p>
           <p className="text-sm leading-relaxed" style={{ color: "#1D1D1F" }}>
-            A maioria das alavancas do corpo humano é de 3ª classe (interpotente), com desvantagem
-            mecânica (VM &lt; 1) — o corpo troca força por velocidade e amplitude de movimento.
+            A maioria das alavancas do corpo humano é interpotente, com desvantagem mecânica (VM &lt; 1)
+            — o corpo troca força por velocidade e amplitude de movimento.
           </p>
           <p className="text-sm leading-relaxed" style={{ color: "#1D1D1F" }}>
             Na prescrição de exercícios: aumentar a distância da carga ao eixo deixa o exercício mais
