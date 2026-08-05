@@ -1475,11 +1475,11 @@ function VisualizadorAlavancas({ onBack }) {
                 <stop offset="55%" stopColor="#9A9CA3" />
                 <stop offset="100%" stopColor="#6E7078" />
               </linearGradient>
-              <marker id="arrowBlue2" markerWidth="9" markerHeight="9" refX="4.5" refY="4.5" orient="auto">
-                <path d="M0,0 L9,4.5 L0,9 Z" fill="#2563EB" />
+              <marker id="arrowBlue2" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#2563EB" />
               </marker>
-              <marker id="arrowRed2" markerWidth="9" markerHeight="9" refX="4.5" refY="4.5" orient="auto">
-                <path d="M0,0 L9,4.5 L0,9 Z" fill="#EF4444" />
+              <marker id="arrowRed2" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#EF4444" />
               </marker>
             </defs>
 
@@ -1639,9 +1639,8 @@ const TOOLS = [
     id: "alavancas",
     title: "Visualizador de Alavancas",
     subtitle: "Cinesiologia e Biomecânica",
-    description: "Ajuste forças e braços de alavanca e veja o torque e a contração resultante.",
+    description: "Ajuste forças e posições e veja o torque e a contração resultante.",
     component: VisualizadorAlavancas,
-    locked: true,
   },
 ];
 
