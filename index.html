@@ -131,19 +131,8 @@ function CadastroLogin() {
             </p>
           </div>
         </div>
-        <p className="text-xs text-center mb-2" style={{ color: "#9A9AA0" }}>
+        <p className="text-xs text-center mb-4" style={{ color: "#9A9AA0" }}>
           Ambiente gratuito de estudo com simuladores, jogos e casos clínicos para alunos e professores de fisioterapia.
-        </p>
-        <p className="text-center mb-4">
-          <a
-            href="manual-professor.pdf"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-medium"
-            style={{ color: "#22C55E" }}
-          >
-            📄 Manual do Professor
-          </a>
         </p>
         <p className="text-sm text-center mb-5" style={{ color: "#6E6E73" }}>
           {modo === "cadastro" ? "Crie sua conta para começar" : "Entre na sua conta"}
@@ -1594,11 +1583,14 @@ function AdminPanel({ onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(29,29,31,0.6)" }}>
-      <div className="max-w-lg w-full max-h-[85vh] overflow-y-auto rounded-2xl p-5" style={{ background: "#FFFFFF" }}>
-        <div className="flex items-center justify-between mb-4">
+      <div className="max-w-lg w-full max-h-[85vh] rounded-2xl flex flex-col" style={{ background: "#FFFFFF" }}>
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <h3 className="text-lg font-semibold" style={{ color: "#1D1D1F" }}>Painel administrativo</h3>
-          <button onClick={onClose} className="text-sm" style={{ color: "#9A9AA0" }}>Fechar</button>
+          <button onClick={onClose} className="text-sm px-3 py-1.5 rounded-full" style={{ color: "#1D1D1F", background: "#F5F5F7", border: "1px solid #E5E5EA" }}>
+            Fechar
+          </button>
         </div>
+        <div className="overflow-y-auto px-5 pb-5">
 
         {!unlocked ? (
           <>
@@ -1664,6 +1656,7 @@ function AdminPanel({ onClose }) {
             </div>
           </>
         )}
+        </div>
       </div>
     </div>
   );
@@ -1676,8 +1669,16 @@ function Home({ onSelect, user }) {
     /iPhone|iPad|iPod/.test(navigator.userAgent) ? "ios" : "android"
   );
   const [showAdmin, setShowAdmin] = useState(false);
+  const [perfil, setPerfil] = useState(null);
   const tapCountRef = useRef(0);
   const tapTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (!user) return;
+    db.collection("usuarios").doc(user.uid).get()
+      .then((doc) => setPerfil(doc.exists ? doc.data().perfil : null))
+      .catch(() => {});
+  }, [user]);
 
   function handleLogoTap() {
     tapCountRef.current += 1;
@@ -1834,15 +1835,17 @@ function Home({ onSelect, user }) {
             >
               Conhecer a OrtoFlix →
             </a>
-            <a
-              href="manual-professor.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block text-center text-sm font-medium px-5 py-2.5 rounded-full mb-3"
-              style={{ background: "#F5F5F7", color: "#1D1D1F", border: "1px solid #E5E5EA" }}
-            >
-              📄 Manual do Professor
-            </a>
+            {perfil === "professor" && (
+              <a
+                href="manual-professor.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-center text-sm font-medium px-5 py-2.5 rounded-full mb-3"
+                style={{ background: "#F5F5F7", color: "#1D1D1F", border: "1px solid #E5E5EA" }}
+              >
+                📄 Manual do Professor
+              </a>
+            )}
             <button
               onClick={() => setShowAbout(false)}
               className="w-full text-center text-xs"
