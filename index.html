@@ -1735,6 +1735,20 @@ function Home({ onSelect, user }) {
         </button>
       </div>
 
+      {perfil === "professor" && (
+        <div className="text-center mb-2">
+          <a
+            href="manual-professor.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium"
+            style={{ color: "#22C55E" }}
+          >
+            📄 Manual do Professor
+          </a>
+        </div>
+      )}
+
       {showInstall && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-5"
@@ -1835,17 +1849,6 @@ function Home({ onSelect, user }) {
             >
               Conhecer a OrtoFlix →
             </a>
-            {perfil === "professor" && (
-              <a
-                href="manual-professor.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block text-center text-sm font-medium px-5 py-2.5 rounded-full mb-3"
-                style={{ background: "#F5F5F7", color: "#1D1D1F", border: "1px solid #E5E5EA" }}
-              >
-                📄 Manual do Professor
-              </a>
-            )}
             <button
               onClick={() => setShowAbout(false)}
               className="w-full text-center text-xs"
