@@ -1854,6 +1854,34 @@ function ExternalToolCard({ tool, user }) {
   );
 }
 
+function OrtoFlixCard({ user }) {
+  return (
+    <a
+      href="https://ortoflix.com"
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={() => logAcesso(user, { id: "ortoflix-plataforma", title: "Acessar minha plataforma OrtoFlix" })}
+      className="text-left rounded-2xl p-5 w-full block transition-shadow hover:shadow-md"
+      style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}
+    >
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#E8192C" }}>
+          OrtoFlix
+        </p>
+        <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ color: "#6E6E73", background: "#F2F2F7" }}>
+          abre em outra aba
+        </span>
+      </div>
+      <h3 className="text-lg font-semibold mb-1" style={{ color: "#1D1D1F" }}>
+        Acessar minha plataforma OrtoFlix ↗
+      </h3>
+      <p className="text-sm leading-relaxed" style={{ color: "#6E6E73" }}>
+        Acesse o conteúdo da sua assinatura agora mesmo!
+      </p>
+    </a>
+  );
+}
+
 function CubeIcon({ size = 56 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100">
@@ -1900,6 +1928,32 @@ function AdminPanel({ onClose }) {
     } finally {
       setLoading(false);
     }
+  }
+
+  function csvEscape(value) {
+    const str = String(value == null ? "" : value);
+    if (/[",\n]/.test(str)) {
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  }
+
+  function exportarLeadsCSV() {
+    const linhas = [["Nome completo", "E-mail", "Perfil", "Cadastrado em"]];
+    for (const u of usuarios) {
+      const data = u.criadoEm && u.criadoEm.toDate ? u.criadoEm.toDate().toLocaleString("pt-BR") : "";
+      linhas.push([u.nome || "", u.email || "", u.perfil || "", data]);
+    }
+    const csv = "\uFEFF" + linhas.map((linha) => linha.map(csvEscape).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fisiolab-leads-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
   const totalAlunos = usuarios.filter((u) => u.perfil === "aluno").length;
@@ -1958,7 +2012,7 @@ function AdminPanel({ onClose }) {
           <p className="text-sm" style={{ color: "#EF4444" }}>{loadError}</p>
         ) : (
           <>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <p className="text-xs" style={{ color: "#9A9AA0" }}>
                 {totalAlunos} aluno(s) · {totalProfessores} professor(es) cadastrado(s)
               </p>
@@ -1966,6 +2020,15 @@ function AdminPanel({ onClose }) {
                 Atualizar
               </button>
             </div>
+
+            <button
+              onClick={exportarLeadsCSV}
+              disabled={usuarios.length === 0}
+              className="w-full py-2 rounded-full text-sm font-semibold mb-4 disabled:opacity-50"
+              style={{ background: "#22C55E", color: "#FFFFFF" }}
+            >
+              Exportar leads (CSV)
+            </button>
 
             <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#22C55E" }}>
               Cliques por ferramenta
@@ -2216,6 +2279,7 @@ function Home({ onSelect, user }) {
               <ToolCard key={tool.id} tool={tool} onSelect={onSelect} user={user} />
             )
           )}
+          <OrtoFlixCard user={user} />
         </div>
 
         <div className="mt-8 rounded-2xl p-6 text-center" style={{ background: "#1D1D1F" }}>
