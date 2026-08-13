@@ -1857,7 +1857,7 @@ function ExternalToolCard({ tool, user }) {
 function OrtoFlixCard({ user }) {
   return (
     <a
-      href="https://ortoflix.com"
+      href="https://sso.hotmart.com/login"
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => logAcesso(user, { id: "ortoflix-plataforma", title: "Acessar minha plataforma OrtoFlix" })}
@@ -1988,7 +1988,7 @@ function AdminPanel({ onClose }) {
             Fechar
           </button>
         </div>
-        <div className="overflow-y-auto px-5 pb-5">
+        <div className="overflow-y-auto px-5 pb-5 flex-1 min-h-0">
 
         {!unlocked ? (
           <>
