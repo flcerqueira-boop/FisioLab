@@ -921,9 +921,9 @@ const KINESIO_WORDS = [
   { answer: "CINEMATICA", clue: "Ramo da biomecânica que descreve o movimento sem considerar suas causas." },
 ];
 
-function PalavrasCruzadas({ onBack }) {
+function Cruzadinha({ onBack, words, titulo, subtitulo }) {
   const { useState, useMemo, useRef } = React;
-  const puzzle = useMemo(() => generateCrossword(KINESIO_WORDS), []);
+  const puzzle = useMemo(() => generateCrossword(words), [words]);
   const [values, setValues] = useState({});
   const [checked, setChecked] = useState(false);
   const inputRefs = useRef({});
@@ -1033,8 +1033,8 @@ function PalavrasCruzadas({ onBack }) {
         style={{ borderColor: "#E5E5EA", background: "#FFFFFF", paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
       >
         <div>
-          <h1 className="text-xl font-bold" style={{ color: "#1D1D1F" }}>Palavras Cruzadas</h1>
-          <p className="text-sm" style={{ color: "#6E6E73" }}>Cinesiologia e Biomecânica</p>
+          <h1 className="text-xl font-bold" style={{ color: "#1D1D1F" }}>{titulo}</h1>
+          <p className="text-sm" style={{ color: "#6E6E73" }}>{subtitulo}</p>
         </div>
         {onBack && (
           <button
@@ -1159,6 +1159,33 @@ function PalavrasCruzadas({ onBack }) {
       </div>
     </div>
   );
+}
+
+function PalavrasCruzadas({ onBack }) {
+  return <Cruzadinha onBack={onBack} words={KINESIO_WORDS} titulo="Palavras Cruzadas" subtitulo="Cinesiologia e Biomecânica" />;
+}
+
+const ANATOMIA_OSSEA_WORDS = [
+  { answer: "FEMUR", clue: "Exemplo de osso longo — o maior osso do corpo humano." },
+  { answer: "CARPO", clue: "Exemplo de osso curto, localizado no punho." },
+  { answer: "ESTERNO", clue: "Exemplo de osso plano, no centro do tórax." },
+  { answer: "VERTEBRA", clue: "Exemplo de osso irregular, parte da coluna vertebral." },
+  { answer: "PATELA", clue: "Exemplo de osso sesamoide, localizado no joelho." },
+  { answer: "FRONTAL", clue: "Exemplo de osso pneumático, com cavidade preenchida por ar (seio frontal)." },
+  { answer: "PROXIMAL", clue: "Termo de posicionamento anatômico: mais perto do tronco/origem do membro." },
+  { answer: "DISTAL", clue: "Termo de posicionamento anatômico: mais longe do tronco/origem do membro." },
+  { answer: "MEDIAL", clue: "Termo de posicionamento anatômico: mais perto da linha média do corpo." },
+  { answer: "LATERAL", clue: "Termo de posicionamento anatômico: mais afastado da linha média do corpo." },
+  { answer: "COMPACTO", clue: "Tipo de tecido ósseo denso, encontrado na camada externa dos ossos." },
+  { answer: "ESPONJOSO", clue: "Tipo de tecido ósseo poroso, encontrado no interior dos ossos." },
+  { answer: "PERIOSTEO", clue: "Membrana que reveste a superfície externa do osso." },
+  { answer: "DIAFISE", clue: "Parte central e alongada de um osso longo." },
+  { answer: "EPIFISE", clue: "Extremidade de um osso longo, próxima às articulações." },
+  { answer: "OSSIFICACAO", clue: "Processo de formação do tecido ósseo." },
+];
+
+function PalavrasCruzadasAnatomia({ onBack }) {
+  return <Cruzadinha onBack={onBack} words={ANATOMIA_OSSEA_WORDS} titulo="Palavras Cruzadas" subtitulo="Anatomia Óssea" />;
 }
 
 /* =========================================================================
@@ -1608,6 +1635,253 @@ function VisualizadorAlavancas({ onBack }) {
 }
 
 /* =========================================================================
+   JOGO DE POSICIONAMENTO ANATÔMICO — toque no ponto certo, contra o tempo.
+   Silhueta simplificada (vista frontal), pontos marcados em pares
+   simétricos (A/B) sem indicar lado anatômico — o jogo pergunta apenas
+   sobre relações de posição (proximal/distal/medial/lateral/superior/
+   inferior), nunca sobre lateralidade.
+   ========================================================================= */
+
+const POSICAO_PONTOS = {
+  cabeca: { x: 100, y: 30 },
+  pescoco: { x: 100, y: 60 },
+  torax: { x: 100, y: 110 },
+  quadril: { x: 100, y: 232 },
+  ombroA: { x: 65, y: 85 },
+  ombroB: { x: 135, y: 85 },
+  cotoveloA: { x: 50, y: 150 },
+  cotoveloB: { x: 150, y: 150 },
+  punhoA: { x: 45, y: 205 },
+  punhoB: { x: 155, y: 205 },
+  maoA: { x: 43, y: 225 },
+  maoB: { x: 157, y: 225 },
+  quadrilA: { x: 80, y: 235 },
+  quadrilB: { x: 120, y: 235 },
+  joelhoA: { x: 78, y: 305 },
+  joelhoB: { x: 122, y: 305 },
+  tornozeloA: { x: 76, y: 375 },
+  tornozeloB: { x: 124, y: 375 },
+  peA: { x: 74, y: 395 },
+  peB: { x: 126, y: 395 },
+};
+
+const POSICAO_RODADAS = [
+  { texto: "Toque num ponto DISTAL ao ombro", ref: "ombroB", opcoes: [{ id: "cotoveloB", correta: true }, { id: "maoB", correta: true }, { id: "quadrilB", correta: false }] },
+  { texto: "Toque num ponto DISTAL ao quadril", ref: "quadrilA", opcoes: [{ id: "joelhoA", correta: true }, { id: "peA", correta: true }, { id: "ombroA", correta: false }] },
+  { texto: "Toque num ponto DISTAL ao cotovelo", ref: "cotoveloB", opcoes: [{ id: "punhoB", correta: true }, { id: "maoB", correta: true }, { id: "ombroB", correta: false }] },
+  { texto: "Toque num ponto PROXIMAL ao punho", ref: "punhoA", opcoes: [{ id: "cotoveloA", correta: true }, { id: "ombroA", correta: true }, { id: "maoA", correta: false }] },
+  { texto: "Toque num ponto PROXIMAL ao tornozelo", ref: "tornozeloB", opcoes: [{ id: "joelhoB", correta: true }, { id: "quadrilB", correta: true }, { id: "peB", correta: false }] },
+  { texto: "Toque num ponto PROXIMAL ao joelho", ref: "joelhoA", opcoes: [{ id: "quadrilA", correta: true }, { id: "quadril", correta: true }, { id: "tornozeloA", correta: false }] },
+  { texto: "Toque num ponto MEDIAL ao ombro (mais perto da linha média)", ref: "ombroA", opcoes: [{ id: "torax", correta: true }, { id: "pescoco", correta: true }, { id: "maoA", correta: false }] },
+  { texto: "Toque num ponto MEDIAL ao joelho", ref: "joelhoB", opcoes: [{ id: "quadril", correta: true }, { id: "torax", correta: true }, { id: "tornozeloB", correta: false }] },
+  { texto: "Toque num ponto LATERAL ao tórax (mais afastado da linha média)", ref: "torax", opcoes: [{ id: "ombroA", correta: true }, { id: "ombroB", correta: true }, { id: "pescoco", correta: false }] },
+  { texto: "Toque num ponto LATERAL ao quadril", ref: "quadril", opcoes: [{ id: "quadrilA", correta: true }, { id: "quadrilB", correta: true }, { id: "torax", correta: false }] },
+  { texto: "Toque no ponto mais SUPERIOR entre os dois marcados", opcoes: [{ id: "ombroB", correta: true }, { id: "joelhoA", correta: false }] },
+  { texto: "Toque no ponto mais SUPERIOR entre os dois marcados", opcoes: [{ id: "pescoco", correta: true }, { id: "tornozeloA", correta: false }] },
+  { texto: "Toque no ponto mais INFERIOR entre os dois marcados", opcoes: [{ id: "maoA", correta: false }, { id: "peA", correta: true }] },
+  { texto: "Toque no ponto mais INFERIOR entre os dois marcados", opcoes: [{ id: "cotoveloB", correta: false }, { id: "joelhoB", correta: true }] },
+];
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function JogoPosicionamento({ onBack }) {
+  const { useState, useEffect, useRef } = React;
+  const ROUND_TIME = 8;
+
+  const [fase, setFase] = useState("intro"); // "intro" | "jogando" | "fim"
+  const [rodadas, setRodadas] = useState([]);
+  const [indice, setIndice] = useState(0);
+  const [tempo, setTempo] = useState(ROUND_TIME);
+  const [pontuacao, setPontuacao] = useState(0);
+  const [selecionado, setSelecionado] = useState(null);
+  const [travarToque, setTravarToque] = useState(false);
+  const timerRef = useRef(null);
+
+  function iniciar() {
+    setRodadas(shuffleArray(POSICAO_RODADAS));
+    setIndice(0);
+    setPontuacao(0);
+    setTempo(ROUND_TIME);
+    setSelecionado(null);
+    setTravarToque(false);
+    setFase("jogando");
+  }
+
+  const rodadaAtual = rodadas[indice];
+
+  useEffect(() => {
+    if (fase !== "jogando") return;
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setTempo((t) => {
+        if (t <= 1) {
+          clearInterval(timerRef.current);
+          avancar(false, null);
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+    // eslint-disable-next-line
+  }, [fase, indice]);
+
+  function avancar(acertou, idTocado) {
+    setTravarToque(true);
+    setSelecionado(idTocado);
+    if (acertou) setPontuacao((p) => p + 1);
+    setTimeout(() => {
+      setSelecionado(null);
+      setTravarToque(false);
+      if (indice + 1 >= rodadas.length) {
+        setFase("fim");
+      } else {
+        setIndice((i) => i + 1);
+        setTempo(ROUND_TIME);
+      }
+    }, 700);
+  }
+
+  function handleTap(opcao) {
+    if (travarToque) return;
+    if (timerRef.current) clearInterval(timerRef.current);
+    avancar(opcao.correta, opcao.id);
+  }
+
+  return (
+    <div className="min-h-screen w-full" style={{ background: "#F5F5F7" }}>
+      <div
+        className="px-5 pb-4 border-b flex items-center justify-between"
+        style={{ borderColor: "#E5E5EA", background: "#FFFFFF", paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
+      >
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: "#1D1D1F" }}>Posicionamento Anatômico</h1>
+          <p className="text-sm" style={{ color: "#6E6E73" }}>Anatomia Óssea</p>
+        </div>
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap"
+            style={{ background: "#F5F5F7", border: "1px solid #E5E5EA", color: "#6E6E73" }}
+          >
+            ← FisioLab
+          </button>
+        )}
+      </div>
+
+      <div className="p-4 max-w-md mx-auto">
+        {fase === "intro" && (
+          <div className="rounded-2xl p-5 text-center" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+            <p className="text-sm leading-relaxed mb-4" style={{ color: "#1D1D1F" }}>
+              Toque no ponto certo do corpo antes que o tempo acabe. {POSICAO_RODADAS.length} rodadas,
+              {" "}{ROUND_TIME}s cada — testa proximal/distal, medial/lateral e superior/inferior.
+            </p>
+            <button onClick={iniciar} className="w-full py-2.5 rounded-full text-sm font-semibold" style={{ background: "#22C55E", color: "#FFFFFF" }}>
+              Começar
+            </button>
+          </div>
+        )}
+
+        {fase === "jogando" && rodadaAtual && (
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold" style={{ color: "#6E6E73" }}>
+                Rodada {indice + 1}/{rodadas.length} · Pontos: {pontuacao}
+              </p>
+              <span
+                className="text-xs font-bold px-2.5 py-1 rounded-full"
+                style={{ background: tempo <= 3 ? "#FEE2E2" : "#EAFBF0", color: tempo <= 3 ? "#DC2626" : "#16A34A" }}
+              >
+                {tempo}s
+              </span>
+            </div>
+
+            <div className="rounded-2xl p-4 mb-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+              <p className="text-sm font-semibold text-center mb-3" style={{ color: "#1D1D1F" }}>
+                {rodadaAtual.texto}
+              </p>
+
+              <svg viewBox="0 0 200 420" width="100%" height="360">
+                {/* silhueta simplificada (esqueleto de linhas) */}
+                <g stroke="#D2D2D7" strokeWidth="6" strokeLinecap="round" fill="none">
+                  <line x1={POSICAO_PONTOS.pescoco.x} y1={POSICAO_PONTOS.pescoco.y} x2={POSICAO_PONTOS.quadril.x} y2={POSICAO_PONTOS.quadril.y} />
+                  <line x1={POSICAO_PONTOS.ombroA.x} y1={POSICAO_PONTOS.ombroA.y} x2={POSICAO_PONTOS.ombroB.x} y2={POSICAO_PONTOS.ombroB.y} />
+                  <line x1={POSICAO_PONTOS.ombroA.x} y1={POSICAO_PONTOS.ombroA.y} x2={POSICAO_PONTOS.cotoveloA.x} y2={POSICAO_PONTOS.cotoveloA.y} />
+                  <line x1={POSICAO_PONTOS.cotoveloA.x} y1={POSICAO_PONTOS.cotoveloA.y} x2={POSICAO_PONTOS.punhoA.x} y2={POSICAO_PONTOS.punhoA.y} />
+                  <line x1={POSICAO_PONTOS.punhoA.x} y1={POSICAO_PONTOS.punhoA.y} x2={POSICAO_PONTOS.maoA.x} y2={POSICAO_PONTOS.maoA.y} />
+                  <line x1={POSICAO_PONTOS.ombroB.x} y1={POSICAO_PONTOS.ombroB.y} x2={POSICAO_PONTOS.cotoveloB.x} y2={POSICAO_PONTOS.cotoveloB.y} />
+                  <line x1={POSICAO_PONTOS.cotoveloB.x} y1={POSICAO_PONTOS.cotoveloB.y} x2={POSICAO_PONTOS.punhoB.x} y2={POSICAO_PONTOS.punhoB.y} />
+                  <line x1={POSICAO_PONTOS.punhoB.x} y1={POSICAO_PONTOS.punhoB.y} x2={POSICAO_PONTOS.maoB.x} y2={POSICAO_PONTOS.maoB.y} />
+                  <line x1={POSICAO_PONTOS.quadrilA.x} y1={POSICAO_PONTOS.quadrilA.y} x2={POSICAO_PONTOS.quadrilB.x} y2={POSICAO_PONTOS.quadrilB.y} />
+                  <line x1={POSICAO_PONTOS.quadrilA.x} y1={POSICAO_PONTOS.quadrilA.y} x2={POSICAO_PONTOS.joelhoA.x} y2={POSICAO_PONTOS.joelhoA.y} />
+                  <line x1={POSICAO_PONTOS.joelhoA.x} y1={POSICAO_PONTOS.joelhoA.y} x2={POSICAO_PONTOS.tornozeloA.x} y2={POSICAO_PONTOS.tornozeloA.y} />
+                  <line x1={POSICAO_PONTOS.tornozeloA.x} y1={POSICAO_PONTOS.tornozeloA.y} x2={POSICAO_PONTOS.peA.x} y2={POSICAO_PONTOS.peA.y} />
+                  <line x1={POSICAO_PONTOS.quadrilB.x} y1={POSICAO_PONTOS.quadrilB.y} x2={POSICAO_PONTOS.joelhoB.x} y2={POSICAO_PONTOS.joelhoB.y} />
+                  <line x1={POSICAO_PONTOS.joelhoB.x} y1={POSICAO_PONTOS.joelhoB.y} x2={POSICAO_PONTOS.tornozeloB.x} y2={POSICAO_PONTOS.tornozeloB.y} />
+                  <line x1={POSICAO_PONTOS.tornozeloB.x} y1={POSICAO_PONTOS.tornozeloB.y} x2={POSICAO_PONTOS.peB.x} y2={POSICAO_PONTOS.peB.y} />
+                </g>
+                <circle cx={POSICAO_PONTOS.cabeca.x} cy={POSICAO_PONTOS.cabeca.y} r="18" fill="#EDEDF0" stroke="#D2D2D7" strokeWidth="3" />
+
+                {/* ponto de referência, se houver */}
+                {rodadaAtual.ref && (
+                  <g>
+                    <circle cx={POSICAO_PONTOS[rodadaAtual.ref].x} cy={POSICAO_PONTOS[rodadaAtual.ref].y} r="10" fill="#F59E0B" stroke="#FFFFFF" strokeWidth="2" />
+                    <text x={POSICAO_PONTOS[rodadaAtual.ref].x} y={POSICAO_PONTOS[rodadaAtual.ref].y - 15} textAnchor="middle" fontSize="10" fill="#B45309" fontWeight="700">REF</text>
+                  </g>
+                )}
+
+                {/* opções tocáveis */}
+                {rodadaAtual.opcoes.map((op) => {
+                  const p = POSICAO_PONTOS[op.id];
+                  const foiSelecionado = selecionado === op.id;
+                  let fill = "#9CA3AF";
+                  if (foiSelecionado) fill = op.correta ? "#22C55E" : "#EF4444";
+                  return (
+                    <circle
+                      key={op.id}
+                      cx={p.x}
+                      cy={p.y}
+                      r="14"
+                      fill={fill}
+                      stroke="#FFFFFF"
+                      strokeWidth="2.5"
+                      onClick={() => handleTap(op)}
+                      style={{ cursor: "pointer" }}
+                    />
+                  );
+                })}
+              </svg>
+            </div>
+          </>
+        )}
+
+        {fase === "fim" && (
+          <div className="rounded-2xl p-5 text-center" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+            <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "#22C55E" }}>Resultado</p>
+            <p className="text-3xl font-bold mb-1" style={{ color: "#1D1D1F" }}>{pontuacao} / {rodadas.length}</p>
+            <p className="text-sm mb-4" style={{ color: "#6E6E73" }}>
+              {pontuacao === rodadas.length ? "Perfeito!" : pontuacao >= rodadas.length * 0.7 ? "Muito bom!" : "Vale revisar os termos e jogar de novo."}
+            </p>
+            <button onClick={iniciar} className="w-full py-2.5 rounded-full text-sm font-semibold" style={{ background: "#22C55E", color: "#FFFFFF" }}>
+              Jogar de novo
+            </button>
+          </div>
+        )}
+
+        <ContactFooter />
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================================
    TELA INICIAL — catálogo de ferramentas do FisioLab.
    Para adicionar uma nova ferramenta no futuro: crie o componente e
    acrescente uma entrada no array TOOLS abaixo.
@@ -1627,6 +1901,20 @@ const TOOLS = [
     subtitle: "Cinesiologia e Biomecânica",
     description: "Revise os termos fundamentais de cinesiologia jogando.",
     component: PalavrasCruzadas,
+  },
+  {
+    id: "palavras-cruzadas-anatomia",
+    title: "Palavras Cruzadas",
+    subtitle: "Anatomia Óssea",
+    description: "Revise classificação, posicionamento e estrutura óssea jogando.",
+    component: PalavrasCruzadasAnatomia,
+  },
+  {
+    id: "posicionamento",
+    title: "Posicionamento Anatômico",
+    subtitle: "Anatomia Óssea",
+    description: "Toque no ponto certo antes que o tempo acabe.",
+    component: JogoPosicionamento,
   },
   {
     id: "super-trunfo",
@@ -1664,7 +1952,7 @@ const EXTERNAL_TOOLS = [
 
 // Ordem de exibição por categoria de conteúdo — para adicionar uma nova
 // categoria, é só incluir o nome aqui na posição desejada.
-const CATEGORY_ORDER = ["Recursos Físicos", "Ortopedia e Traumatologia", "Cinesiologia e Biomecânica"];
+const CATEGORY_ORDER = ["Recursos Físicos", "Ortopedia e Traumatologia", "Cinesiologia e Biomecânica", "Anatomia Óssea"];
 
 const ALL_TOOLS_SORTED = [
   ...TOOLS.map((t) => ({ ...t, type: "internal" })),
