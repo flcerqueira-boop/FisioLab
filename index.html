@@ -1185,7 +1185,7 @@ const ANATOMIA_OSSEA_WORDS = [
 ];
 
 function PalavrasCruzadasAnatomia({ onBack }) {
-  return <Cruzadinha onBack={onBack} words={ANATOMIA_OSSEA_WORDS} titulo="Palavras Cruzadas" subtitulo="Anatomia Óssea" />;
+  return <Cruzadinha onBack={onBack} words={ANATOMIA_OSSEA_WORDS} titulo="Palavras Cruzadas" subtitulo="Cinesiologia e Biomecânica" />;
 }
 
 /* =========================================================================
@@ -1676,10 +1676,10 @@ const POSICAO_RODADAS = [
   { texto: "Toque num ponto MEDIAL ao joelho", ref: "joelhoB", opcoes: [{ id: "quadril", correta: true }, { id: "torax", correta: true }, { id: "tornozeloB", correta: false }] },
   { texto: "Toque num ponto LATERAL ao tórax (mais afastado da linha média)", ref: "torax", opcoes: [{ id: "ombroA", correta: true }, { id: "ombroB", correta: true }, { id: "pescoco", correta: false }] },
   { texto: "Toque num ponto LATERAL ao quadril", ref: "quadril", opcoes: [{ id: "quadrilA", correta: true }, { id: "quadrilB", correta: true }, { id: "torax", correta: false }] },
-  { texto: "Toque no ponto mais SUPERIOR entre os dois marcados", opcoes: [{ id: "ombroB", correta: true }, { id: "joelhoA", correta: false }] },
-  { texto: "Toque no ponto mais SUPERIOR entre os dois marcados", opcoes: [{ id: "pescoco", correta: true }, { id: "tornozeloA", correta: false }] },
-  { texto: "Toque no ponto mais INFERIOR entre os dois marcados", opcoes: [{ id: "maoA", correta: false }, { id: "peA", correta: true }] },
-  { texto: "Toque no ponto mais INFERIOR entre os dois marcados", opcoes: [{ id: "cotoveloB", correta: false }, { id: "joelhoB", correta: true }] },
+  { texto: "Toque no ponto mais CRANIAL entre os dois marcados", opcoes: [{ id: "ombroB", correta: true }, { id: "joelhoA", correta: false }] },
+  { texto: "Toque no ponto mais CRANIAL entre os dois marcados", opcoes: [{ id: "pescoco", correta: true }, { id: "tornozeloA", correta: false }] },
+  { texto: "Toque no ponto mais CAUDAL entre os dois marcados", opcoes: [{ id: "maoA", correta: false }, { id: "peA", correta: true }] },
+  { texto: "Toque no ponto mais CAUDAL entre os dois marcados", opcoes: [{ id: "cotoveloB", correta: false }, { id: "joelhoB", correta: true }] },
 ];
 
 function shuffleArray(arr) {
@@ -1763,7 +1763,7 @@ function JogoPosicionamento({ onBack }) {
       >
         <div>
           <h1 className="text-xl font-bold" style={{ color: "#1D1D1F" }}>Posicionamento Anatômico</h1>
-          <p className="text-sm" style={{ color: "#6E6E73" }}>Anatomia Óssea</p>
+          <p className="text-sm" style={{ color: "#6E6E73" }}>Cinesiologia e Biomecânica</p>
         </div>
         {onBack && (
           <button
@@ -1905,14 +1905,14 @@ const TOOLS = [
   {
     id: "palavras-cruzadas-anatomia",
     title: "Palavras Cruzadas",
-    subtitle: "Anatomia Óssea",
+    subtitle: "Cinesiologia e Biomecânica",
     description: "Revise classificação, posicionamento e estrutura óssea jogando.",
     component: PalavrasCruzadasAnatomia,
   },
   {
     id: "posicionamento",
     title: "Posicionamento Anatômico",
-    subtitle: "Anatomia Óssea",
+    subtitle: "Cinesiologia e Biomecânica",
     description: "Toque no ponto certo antes que o tempo acabe.",
     component: JogoPosicionamento,
   },
@@ -1952,7 +1952,7 @@ const EXTERNAL_TOOLS = [
 
 // Ordem de exibição por categoria de conteúdo — para adicionar uma nova
 // categoria, é só incluir o nome aqui na posição desejada.
-const CATEGORY_ORDER = ["Recursos Físicos", "Ortopedia e Traumatologia", "Cinesiologia e Biomecânica", "Anatomia Óssea"];
+const CATEGORY_ORDER = ["Recursos Físicos", "Ortopedia e Traumatologia", "Cinesiologia e Biomecânica"];
 
 const ALL_TOOLS_SORTED = [
   ...TOOLS.map((t) => ({ ...t, type: "internal" })),
