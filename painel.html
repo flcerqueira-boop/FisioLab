@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Painel Administrativo — FisioLab</title>
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#22C55E" />
+<link rel="icon" href="icon-192.png" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.7/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore-compat.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  body { margin: 0; background: #F5F5F7; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect } = React;
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC29uyLP3YS-VMs8aFEwYe4qbgblGGP8eY",
+  authDomain: "fisiolab-a4835.firebaseapp.com",
+  projectId: "fisiolab-a4835",
+  storageBucket: "fisiolab-a4835.firebasestorage.app",
+  messagingSenderId: "395561821532",
+  appId: "1:395561821532:web:6a33520680d6f2df830d99",
+  measurementId: "G-VZLR1G737C",
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const ADMIN_PASSCODE = "231087";
+
+function PageHeader() {
+  return (
+    <div
+      className="px-5 pb-4 border-b flex items-center justify-between"
+      style={{ borderColor: "#E5E5EA", background: "#FFFFFF", paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
+    >
+      <h1 className="text-xl font-bold" style={{ color: "#1D1D1F" }}>Painel Administrativo</h1>
+      <a
+        href="index.html"
+        className="text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap"
+        style={{ background: "#F5F5F7", border: "1px solid #E5E5EA", color: "#6E6E73" }}
+      >
+        ← FisioLab
+      </a>
+    </div>
+  );
+}
+
+function PainelPage() {
+  const [authStatus, setAuthStatus] = useState("loading"); // "loading" | "out" | "in"
+  const [unlocked, setUnlocked] = useState(false);
+  const [passcodeInput, setPasscodeInput] = useState("");
+  const [passError, setPassError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [usuarios, setUsuarios] = useState([]);
+  const [acessos, setAcessos] = useState([]);
+
+  const [promoTitulo, setPromoTitulo] = useState("");
+  const [promoDescricao, setPromoDescricao] = useState("");
+  const [promoCta, setPromoCta] = useState("");
+  const [promoAtiva, setPromoAtiva] = useState(false);
+  const [promoCampanhaId, setPromoCampanhaId] = useState(null);
+  const [promoSalvando, setPromoSalvando] = useState(false);
+  const [promoStatus, setPromoStatus] = useState("");
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setAuthStatus(user ? "in" : "out");
+    });
+    return unsubscribe;
+  }, []);
+
+  function tryUnlock() {
+    if (passcodeInput === ADMIN_PASSCODE) {
+      setUnlocked(true);
+      setPassError("");
+      carregarDados();
+    } else {
+      setPassError("Senha incorreta.");
+    }
+  }
+
+  async function carregarDados() {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const [usuariosSnap, acessosSnap, promoSnap] = await Promise.all([
+        db.collection("usuarios").get(),
+        db.collection("acessos").get(),
+        db.collection("config").doc("promocao").get(),
+      ]);
+      setUsuarios(usuariosSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setAcessos(acessosSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      if (promoSnap.exists) {
+        const p = promoSnap.data();
+        setPromoTitulo(p.titulo || "");
+        setPromoDescricao(p.descricao || "");
+        setPromoCta(p.cta || "");
+        setPromoAtiva(!!p.ativa);
+        setPromoCampanhaId(p.campanhaId || null);
+      }
+    } catch (e) {
+      setLoadError("Não foi possível carregar os dados (" + (e.code || e.message) + ").");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function salvarPromo(novaCampanha) {
+    setPromoSalvando(true);
+    setPromoStatus("");
+    try {
+      const campanhaId = novaCampanha ? String(Date.now()) : (promoCampanhaId || String(Date.now()));
+      await db.collection("config").doc("promocao").set({
+        titulo: promoTitulo,
+        descricao: promoDescricao,
+        cta: promoCta,
+        ativa: promoAtiva,
+        campanhaId,
+      });
+      setPromoCampanhaId(campanhaId);
+      setPromoStatus(novaCampanha ? "Salvo como nova campanha — vai aparecer pra todo mundo de novo." : "Salvo.");
+    } catch (e) {
+      setPromoStatus("Erro ao salvar (" + (e.code || e.message) + ").");
+    } finally {
+      setPromoSalvando(false);
+    }
+  }
+
+  function csvEscape(value) {
+    const str = String(value == null ? "" : value);
+    if (/[",\n]/.test(str)) {
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  }
+
+  function exportarLeadsCSV() {
+    const linhas = [["Nome completo", "E-mail", "Perfil", "Cadastrado em"]];
+    for (const u of usuarios) {
+      const data = u.criadoEm && u.criadoEm.toDate ? u.criadoEm.toDate().toLocaleString("pt-BR") : "";
+      linhas.push([u.nome || "", u.email || "", u.perfil || "", data]);
+    }
+    const csv = "\uFEFF" + linhas.map((linha) => linha.map(csvEscape).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fisiolab-leads-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  const totalAlunos = usuarios.filter((u) => u.perfil === "aluno").length;
+  const totalProfessores = usuarios.filter((u) => u.perfil === "professor").length;
+
+  const cliquesPorFerramenta = {};
+  for (const a of acessos) {
+    const key = a.toolTitle || a.toolId || "desconhecido";
+    cliquesPorFerramenta[key] = (cliquesPorFerramenta[key] || 0) + 1;
+  }
+  const ferramentasOrdenadas = Object.entries(cliquesPorFerramenta).sort((a, b) => b[1] - a[1]);
+
+  const porAluno = {};
+  for (const a of acessos) {
+    const nome = a.userName || a.userId || "desconhecido";
+    if (!porAluno[nome]) porAluno[nome] = {};
+    const key = a.toolTitle || a.toolId || "desconhecido";
+    porAluno[nome][key] = (porAluno[nome][key] || 0) + 1;
+  }
+  const alunosOrdenados = Object.entries(porAluno).sort((a, b) => {
+    const totalA = Object.values(a[1]).reduce((s, n) => s + n, 0);
+    const totalB = Object.values(b[1]).reduce((s, n) => s + n, 0);
+    return totalB - totalA;
+  });
+
+  if (authStatus === "loading") {
+    return (
+      <div className="min-h-screen w-full" style={{ background: "#F5F5F7" }}>
+        <PageHeader />
+        <div className="p-5 text-center">
+          <p className="text-sm" style={{ color: "#6E6E73" }}>Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (authStatus === "out") {
+    return (
+      <div className="min-h-screen w-full" style={{ background: "#F5F5F7" }}>
+        <PageHeader />
+        <div className="p-5 max-w-md mx-auto text-center">
+          <div className="rounded-2xl p-6 mt-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+            <p className="text-sm leading-relaxed mb-4" style={{ color: "#1D1D1F" }}>
+              Você precisa estar logado no FisioLab neste navegador pra acessar o painel.
+            </p>
+            <a
+              href="index.html"
+              className="inline-block text-sm font-semibold px-5 py-2.5 rounded-full"
+              style={{ background: "#22C55E", color: "#FFFFFF" }}
+            >
+              Ir para o FisioLab
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen w-full" style={{ background: "#F5F5F7" }}>
+      <PageHeader />
+      <div className="p-4 max-w-lg mx-auto">
+        {!unlocked ? (
+          <div className="rounded-2xl p-6 mt-2" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+            <p className="text-sm mb-2" style={{ color: "#6E6E73" }}>Senha de acesso</p>
+            <input
+              type="password"
+              value={passcodeInput}
+              onChange={(e) => setPasscodeInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && tryUnlock()}
+              className="w-full rounded-lg px-3 py-2 text-sm border outline-none mb-3"
+              style={{ borderColor: "#E5E5EA" }}
+              autoFocus
+            />
+            {passError && <p className="text-xs mb-3" style={{ color: "#EF4444" }}>{passError}</p>}
+            <button onClick={tryUnlock} className="w-full py-2.5 rounded-full text-sm font-semibold" style={{ background: "#22C55E", color: "#FFFFFF" }}>
+              Entrar
+            </button>
+          </div>
+        ) : loading ? (
+          <p className="text-sm mt-4" style={{ color: "#6E6E73" }}>Carregando...</p>
+        ) : loadError ? (
+          <p className="text-sm mt-4" style={{ color: "#EF4444" }}>{loadError}</p>
+        ) : (
+          <div className="mt-2">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs" style={{ color: "#9A9AA0" }}>
+                {totalAlunos} aluno(s) · {totalProfessores} professor(es) cadastrado(s)
+              </p>
+              <button onClick={carregarDados} className="text-xs px-2 py-1 rounded border" style={{ borderColor: "#E5E5EA", color: "#6E6E73" }}>
+                Atualizar
+              </button>
+            </div>
+
+            <button
+              onClick={exportarLeadsCSV}
+              disabled={usuarios.length === 0}
+              className="w-full py-2 rounded-full text-sm font-semibold mb-4 disabled:opacity-50"
+              style={{ background: "#22C55E", color: "#FFFFFF" }}
+            >
+              Exportar leads (CSV)
+            </button>
+
+            <div className="rounded-2xl p-4 mb-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: "#22C55E" }}>
+                Popup promocional
+              </p>
+
+              <label className="text-xs font-medium block mb-1" style={{ color: "#6E6E73" }}>Título</label>
+              <input
+                value={promoTitulo}
+                onChange={(e) => setPromoTitulo(e.target.value)}
+                placeholder="Ex.: Parabéns, você ganhou um desconto!"
+                className="w-full rounded-lg px-3 py-2 text-sm border outline-none mb-3"
+                style={{ borderColor: "#E5E5EA", background: "#F5F5F7" }}
+              />
+
+              <label className="text-xs font-medium block mb-1" style={{ color: "#6E6E73" }}>Descrição</label>
+              <textarea
+                value={promoDescricao}
+                onChange={(e) => setPromoDescricao(e.target.value)}
+                rows={3}
+                className="w-full rounded-lg px-3 py-2 text-sm border outline-none mb-3"
+                style={{ borderColor: "#E5E5EA", background: "#F5F5F7" }}
+              />
+
+              <label className="text-xs font-medium block mb-1" style={{ color: "#6E6E73" }}>CTA</label>
+              <input
+                value={promoCta}
+                onChange={(e) => setPromoCta(e.target.value)}
+                placeholder="Ex.: Tire um print dessa tela e envie pelo Instagram"
+                className="w-full rounded-lg px-3 py-2 text-sm border outline-none mb-3"
+                style={{ borderColor: "#E5E5EA", background: "#F5F5F7" }}
+              />
+
+              <label className="flex items-center gap-2 text-sm mb-3" style={{ color: "#1D1D1F" }}>
+                <input type="checkbox" checked={promoAtiva} onChange={(e) => setPromoAtiva(e.target.checked)} />
+                Ativa
+              </label>
+
+              {promoStatus && <p className="text-xs mb-3" style={{ color: "#6E6E73" }}>{promoStatus}</p>}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => salvarPromo(false)}
+                  disabled={promoSalvando}
+                  className="flex-1 py-2 rounded-full text-xs font-semibold disabled:opacity-50"
+                  style={{ background: "#1D1D1F", color: "#FFFFFF" }}
+                >
+                  Salvar
+                </button>
+                <button
+                  onClick={() => salvarPromo(true)}
+                  disabled={promoSalvando}
+                  className="flex-1 py-2 rounded-full text-xs font-semibold disabled:opacity-50"
+                  style={{ background: "#22C55E", color: "#FFFFFF" }}
+                >
+                  Salvar como nova campanha
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl p-4 mb-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#22C55E" }}>
+                Cliques por ferramenta
+              </p>
+              <div className="space-y-1.5">
+                {ferramentasOrdenadas.length === 0 && (
+                  <p className="text-sm italic" style={{ color: "#9A9AA0" }}>Nenhum clique registrado ainda.</p>
+                )}
+                {ferramentasOrdenadas.map(([nome, count]) => (
+                  <div key={nome} className="flex items-center justify-between text-sm" style={{ color: "#1D1D1F" }}>
+                    <span>{nome}</span>
+                    <span className="font-semibold px-2 py-0.5 rounded" style={{ background: "#F5F5F7" }}>{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl p-4 mb-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#22C55E" }}>
+                Uso por aluno
+              </p>
+              <div className="space-y-3">
+                {alunosOrdenados.length === 0 && (
+                  <p className="text-sm italic" style={{ color: "#9A9AA0" }}>Nenhum uso registrado ainda.</p>
+                )}
+                {alunosOrdenados.map(([nome, ferramentas]) => (
+                  <div key={nome} className="rounded-lg p-3" style={{ background: "#F5F5F7" }}>
+                    <p className="text-sm font-medium mb-1" style={{ color: "#1D1D1F" }}>{nome}</p>
+                    {Object.entries(ferramentas).map(([f, c]) => (
+                      <p key={f} className="text-xs" style={{ color: "#6E6E73" }}>{f}: {c}x</p>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<PainelPage />);
+</script>
+</body>
+</html>
