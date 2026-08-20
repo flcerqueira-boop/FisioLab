@@ -2191,6 +2191,14 @@ function AdminPanel({ onClose }) {
   const [usuarios, setUsuarios] = useState([]);
   const [acessos, setAcessos] = useState([]);
 
+  const [promoTitulo, setPromoTitulo] = useState("");
+  const [promoDescricao, setPromoDescricao] = useState("");
+  const [promoCta, setPromoCta] = useState("");
+  const [promoAtiva, setPromoAtiva] = useState(false);
+  const [promoCampanhaId, setPromoCampanhaId] = useState(null);
+  const [promoSalvando, setPromoSalvando] = useState(false);
+  const [promoStatus, setPromoStatus] = useState("");
+
   function tryUnlock() {
     if (passcodeInput === ADMIN_PASSCODE) {
       setUnlocked(true);
@@ -2205,16 +2213,46 @@ function AdminPanel({ onClose }) {
     setLoading(true);
     setLoadError("");
     try {
-      const [usuariosSnap, acessosSnap] = await Promise.all([
+      const [usuariosSnap, acessosSnap, promoSnap] = await Promise.all([
         db.collection("usuarios").get(),
         db.collection("acessos").get(),
+        db.collection("config").doc("promocao").get(),
       ]);
       setUsuarios(usuariosSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
       setAcessos(acessosSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      if (promoSnap.exists) {
+        const p = promoSnap.data();
+        setPromoTitulo(p.titulo || "");
+        setPromoDescricao(p.descricao || "");
+        setPromoCta(p.cta || "");
+        setPromoAtiva(!!p.ativa);
+        setPromoCampanhaId(p.campanhaId || null);
+      }
     } catch (e) {
       setLoadError("Não foi possível carregar os dados (" + (e.code || e.message) + ").");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function salvarPromo(novaCampanha) {
+    setPromoSalvando(true);
+    setPromoStatus("");
+    try {
+      const campanhaId = novaCampanha ? String(Date.now()) : (promoCampanhaId || String(Date.now()));
+      await db.collection("config").doc("promocao").set({
+        titulo: promoTitulo,
+        descricao: promoDescricao,
+        cta: promoCta,
+        ativa: promoAtiva,
+        campanhaId,
+      });
+      setPromoCampanhaId(campanhaId);
+      setPromoStatus(novaCampanha ? "Salvo como nova campanha — vai aparecer pra todo mundo de novo." : "Salvo.");
+    } catch (e) {
+      setPromoStatus("Erro ao salvar (" + (e.code || e.message) + ").");
+    } finally {
+      setPromoSalvando(false);
     }
   }
 
@@ -2318,6 +2356,65 @@ function AdminPanel({ onClose }) {
               Exportar leads (CSV)
             </button>
 
+            <div className="rounded-2xl p-4 mb-4" style={{ background: "#F5F5F7", border: "1px solid #E5E5EA" }}>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: "#22C55E" }}>
+                Popup promocional
+              </p>
+
+              <label className="text-xs font-medium block mb-1" style={{ color: "#6E6E73" }}>Título</label>
+              <input
+                value={promoTitulo}
+                onChange={(e) => setPromoTitulo(e.target.value)}
+                placeholder="Ex.: Parabéns, você ganhou um desconto!"
+                className="w-full rounded-lg px-3 py-2 text-sm border outline-none mb-3"
+                style={{ borderColor: "#E5E5EA", background: "#FFFFFF" }}
+              />
+
+              <label className="text-xs font-medium block mb-1" style={{ color: "#6E6E73" }}>Descrição</label>
+              <textarea
+                value={promoDescricao}
+                onChange={(e) => setPromoDescricao(e.target.value)}
+                rows={3}
+                className="w-full rounded-lg px-3 py-2 text-sm border outline-none mb-3"
+                style={{ borderColor: "#E5E5EA", background: "#FFFFFF" }}
+              />
+
+              <label className="text-xs font-medium block mb-1" style={{ color: "#6E6E73" }}>CTA</label>
+              <input
+                value={promoCta}
+                onChange={(e) => setPromoCta(e.target.value)}
+                placeholder="Ex.: Tire um print dessa tela e envie pelo Instagram"
+                className="w-full rounded-lg px-3 py-2 text-sm border outline-none mb-3"
+                style={{ borderColor: "#E5E5EA", background: "#FFFFFF" }}
+              />
+
+              <label className="flex items-center gap-2 text-sm mb-3" style={{ color: "#1D1D1F" }}>
+                <input type="checkbox" checked={promoAtiva} onChange={(e) => setPromoAtiva(e.target.checked)} />
+                Ativa
+              </label>
+
+              {promoStatus && <p className="text-xs mb-3" style={{ color: "#6E6E73" }}>{promoStatus}</p>}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => salvarPromo(false)}
+                  disabled={promoSalvando}
+                  className="flex-1 py-2 rounded-full text-xs font-semibold disabled:opacity-50"
+                  style={{ background: "#1D1D1F", color: "#FFFFFF" }}
+                >
+                  Salvar
+                </button>
+                <button
+                  onClick={() => salvarPromo(true)}
+                  disabled={promoSalvando}
+                  className="flex-1 py-2 rounded-full text-xs font-semibold disabled:opacity-50"
+                  style={{ background: "#22C55E", color: "#FFFFFF" }}
+                >
+                  Salvar como nova campanha
+                </button>
+              </div>
+            </div>
+
             <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#22C55E" }}>
               Cliques por ferramenta
             </p>
@@ -2365,15 +2462,39 @@ function Home({ onSelect, user }) {
   );
   const [showAdmin, setShowAdmin] = useState(false);
   const [perfil, setPerfil] = useState(null);
+  const [showPromoPopup, setShowPromoPopup] = useState(false);
+  const [promoData, setPromoData] = useState(null);
   const tapCountRef = useRef(0);
   const tapTimerRef = useRef(null);
 
   useEffect(() => {
     if (!user) return;
+    let ultimaCampanhaVista = null;
     db.collection("usuarios").doc(user.uid).get()
-      .then((doc) => setPerfil(doc.exists ? doc.data().perfil : null))
+      .then((doc) => {
+        const data = doc.exists ? doc.data() : {};
+        setPerfil(data.perfil || null);
+        ultimaCampanhaVista = data.ultimaCampanhaVista || null;
+        return db.collection("config").doc("promocao").get();
+      })
+      .then((promoSnap) => {
+        if (promoSnap && promoSnap.exists) {
+          const p = promoSnap.data();
+          if (p.ativa && p.campanhaId && p.campanhaId !== ultimaCampanhaVista) {
+            setPromoData(p);
+            setShowPromoPopup(true);
+          }
+        }
+      })
       .catch(() => {});
   }, [user]);
+
+  function fecharPromoPopup() {
+    setShowPromoPopup(false);
+    if (promoData && promoData.campanhaId && user) {
+      db.collection("usuarios").doc(user.uid).set({ ultimaCampanhaVista: promoData.campanhaId }, { merge: true }).catch(() => {});
+    }
+  }
 
   function handleLogoTap() {
     tapCountRef.current += 1;
@@ -2388,6 +2509,35 @@ function Home({ onSelect, user }) {
 
   return (
     <div className="min-h-screen w-full" style={{ background: "#F5F5F7" }}>
+      {showPromoPopup && promoData && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-5"
+          style={{ background: "rgba(29,29,31,0.6)" }}
+          onClick={fecharPromoPopup}
+        >
+          <div
+            className="max-w-sm w-full rounded-2xl p-6 text-center"
+            style={{ background: "#FFFFFF" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold mb-2" style={{ color: "#1D1D1F" }}>{promoData.titulo}</h3>
+            <p className="text-sm leading-relaxed mb-4" style={{ color: "#6E6E73" }}>{promoData.descricao}</p>
+            {promoData.cta && (
+              <div className="rounded-xl p-3 mb-4" style={{ background: "#EAFBF0", border: "1px solid #BBF7D0" }}>
+                <p className="text-sm font-medium" style={{ color: "#16A34A" }}>{promoData.cta}</p>
+              </div>
+            )}
+            <button
+              onClick={fecharPromoPopup}
+              className="w-full py-2.5 rounded-full text-sm font-semibold"
+              style={{ background: "#22C55E", color: "#FFFFFF" }}
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="px-5 pb-6 flex items-center justify-center gap-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 2.5rem)" }}>
         <div onClick={handleLogoTap}>
           <CubeIcon size={56} />
