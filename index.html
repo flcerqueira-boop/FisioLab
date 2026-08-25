@@ -1882,6 +1882,424 @@ function JogoPosicionamento({ onBack }) {
 }
 
 /* =========================================================================
+   SIMULADOR CLÍNICO DE ELETROTERAPIA — 100% dentro do FisioLab, sem IA.
+   O aluno recebe um card com as características do paciente (já prontas,
+   sem precisar investigar) e precisa configurar o aparelho: parâmetros +
+   número/posição dos eletrodos. Feedback é só certo/errado — o aluno
+   precisa descobrir sozinho o que ajustar.
+   ========================================================================= */
+
+// zonas clicáveis no corpo — cada uma com um raio de tolerância generoso
+// ("quase certo" conta), reaproveitando os pontos do jogo de posicionamento
+const ELETRO_ZONAS = {
+  cotoveloLateralA: { x: 50, y: 150, label: "Cotovelo (lateral)" },
+  cotoveloLateralB: { x: 150, y: 150, label: "Cotovelo (lateral)" },
+  ombroA: { x: 65, y: 85, label: "Ombro" },
+  ombroB: { x: 135, y: 85, label: "Ombro" },
+  panturrilhaA: { x: 77, y: 340, label: "Panturrilha" },
+  panturrilhaB: { x: 123, y: 340, label: "Panturrilha" },
+  quadricepsA: { x: 72, y: 265, label: "Quadríceps (coxa anterior)" },
+  quadricepsB: { x: 128, y: 265, label: "Quadríceps (coxa anterior)" },
+  antebracoPostA: { x: 47, y: 178, label: "Antebraço posterior" },
+  antebracoPostB: { x: 153, y: 178, label: "Antebraço posterior" },
+};
+const ZONA_RAIO = 26;
+
+const ELETRO_CASOS = [
+  {
+    id: "epicondilite",
+    titulo: "Epicondilite Lateral do Cotovelo",
+    card: "Dor lateral no cotovelo há poucos dias, moderada, após aumento de carga no treino de tênis. Sem sinais de processo agudo importante.",
+    contraindicado: false,
+    modulacaoEsperada: false,
+    esperado: {
+      frequencia: [1, 10],
+      duracaoPulso: [250, 600],
+      intensidade: [70, 100],
+      canais: [1, 2],
+      zonas: ["cotoveloLateralA", "cotoveloLateralB"],
+    },
+  },
+  {
+    id: "ombro",
+    titulo: "Dor Crônica no Ombro",
+    card: "Dor no ombro há vários meses, intensidade muito alta. Paciente bastante sensível ao toque e apreensivo com qualquer estímulo novo.",
+    contraindicado: false,
+    modulacaoEsperada: false,
+    esperado: {
+      frequencia: [50, 150],
+      duracaoPulso: [150, 200],
+      intensidade: [15, 40],
+      canais: [1, 2],
+      zonas: ["ombroA", "ombroB"],
+    },
+  },
+  {
+    id: "panturrilha",
+    titulo: "Dor na Panturrilha",
+    card: "Dor na panturrilha há alguns dias, sem histórico claro de esforço físico. Paciente comenta que ficou de repouso prolongado recentemente (viagem longa). À palpação, a perna está discretamente mais quente e um pouco mais inchada em comparação à outra.",
+    contraindicado: true,
+    modulacaoEsperada: false,
+    esperado: null,
+  },
+  {
+    id: "posLCA",
+    titulo: "Pós-operatório de LCA — Inibição Muscular",
+    card: "3 semanas de pós-operatório de reconstrução do LCA. Não consegue contrair o quadríceps voluntariamente, mesmo tentando com força máxima. Derrame articular leve residual.",
+    contraindicado: false,
+    modulacaoEsperada: true,
+    esperado: {
+      frequencia: [35, 80],
+      duracaoPulso: [400, 600],
+      intensidade: [60, 100],
+      canais: [1, 2],
+      zonas: ["quadricepsA", "quadricepsB"],
+    },
+  },
+  {
+    id: "nervoRadial",
+    titulo: "Lesão do Nervo Radial",
+    card: "Paciente com histórico de fratura de úmero, apresenta dificuldade de estender o punho e os dedos ativamente. Sensibilidade alterada no dorso da mão. Movimento passivo preservado.",
+    contraindicado: false,
+    modulacaoEsperada: true,
+    esperado: {
+      frequencia: [35, 60],
+      duracaoPulso: [400, 600],
+      intensidade: [40, 100],
+      canais: [1, 2],
+      zonas: ["antebracoPostA", "antebracoPostB"],
+    },
+  },
+];
+
+function dentroFaixa(v, faixa) {
+  return v >= faixa[0] && v <= faixa[1];
+}
+
+function avaliarCaso(caso, resposta) {
+  if (caso.contraindicado) {
+    return resposta.declarouContraindicado === true;
+  }
+  if (resposta.declarouContraindicado) return false;
+  const p = resposta.parametros;
+  const e = caso.esperado;
+  const paramsOk =
+    dentroFaixa(p.frequencia, e.frequencia) &&
+    dentroFaixa(p.duracaoPulso, e.duracaoPulso) &&
+    dentroFaixa(p.intensidade, e.intensidade);
+  const canaisOk = e.canais.includes(resposta.eletrodos.length);
+  const zonaOk =
+    resposta.eletrodos.length > 0 &&
+    resposta.eletrodos.every((el) => e.zonas.includes(el.zonaId));
+
+  let modulacaoOk;
+  if (caso.modulacaoEsperada) {
+    modulacaoOk =
+      resposta.modulacaoAtiva &&
+      resposta.ton > 0 &&
+      resposta.toff > 0 &&
+      dentroFaixa(resposta.rise, [1, 5]) &&
+      dentroFaixa(resposta.decay, [1, 5]);
+  } else {
+    modulacaoOk = !resposta.modulacaoAtiva;
+  }
+
+  return paramsOk && canaisOk && zonaOk && modulacaoOk;
+}
+
+function SimuladorEletroterapiaClinico({ onBack }) {
+  const { useState } = React;
+  const [casoId, setCasoId] = useState(null);
+  const [frequencia, setFrequencia] = useState(50);
+  const [duracaoPulso, setDuracaoPulso] = useState(200);
+  const [intensidade, setIntensidade] = useState(30);
+  const [eletrodos, setEletrodos] = useState([]);
+  const [modulacaoAtiva, setModulacaoAtiva] = useState(false);
+  const [ton, setTon] = useState(5);
+  const [toff, setToff] = useState(10);
+  const [rise, setRise] = useState(2);
+  const [decay, setDecay] = useState(1);
+  const [resultado, setResultado] = useState(null); // null | "certo" | "errado"
+
+  const caso = ELETRO_CASOS.find((c) => c.id === casoId);
+
+  function iniciarCaso(id) {
+    setCasoId(id);
+    setFrequencia(50);
+    setDuracaoPulso(200);
+    setIntensidade(30);
+    setEletrodos([]);
+    setModulacaoAtiva(false);
+    setTon(5);
+    setToff(10);
+    setRise(2);
+    setDecay(1);
+    setResultado(null);
+  }
+
+  function voltarMenu() {
+    setCasoId(null);
+    setResultado(null);
+  }
+
+  function handleCliqueCorpo(zonaId) {
+    if (resultado) return;
+    setEletrodos((prev) => {
+      const jaTem = prev.find((e) => e.zonaId === zonaId);
+      if (jaTem) return prev.filter((e) => e.zonaId !== zonaId);
+      if (prev.length >= 2) return prev; // máximo 2 canais
+      return [...prev, { zonaId }];
+    });
+  }
+
+  function limparEletrodos() {
+    setEletrodos([]);
+  }
+
+  function avaliar(declarouContraindicado) {
+    const resposta = {
+      declarouContraindicado,
+      parametros: { frequencia, duracaoPulso, intensidade },
+      eletrodos,
+      modulacaoAtiva,
+      ton,
+      toff,
+      rise,
+      decay,
+    };
+    const acertou = avaliarCaso(caso, resposta);
+    setResultado(acertou ? "certo" : "errado");
+  }
+
+  function tentarDeNovo() {
+    setResultado(null);
+  }
+
+  return (
+    <div className="min-h-screen w-full" style={{ background: "#F5F5F7" }}>
+      <div
+        className="px-5 pb-4 border-b flex items-center justify-between"
+        style={{ borderColor: "#E5E5EA", background: "#FFFFFF", paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
+      >
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: "#1D1D1F" }}>Simulador Clínico</h1>
+          <p className="text-sm" style={{ color: "#6E6E73" }}>Eletroterapia</p>
+        </div>
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap"
+            style={{ background: "#F5F5F7", border: "1px solid #E5E5EA", color: "#6E6E73" }}
+          >
+            ← FisioLab
+          </button>
+        )}
+      </div>
+
+      <div className="p-4 max-w-md mx-auto">
+        {!caso && (
+          <>
+            <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: "#6E6E73" }}>
+              Escolha um caso
+            </p>
+            <div className="space-y-3">
+              {ELETRO_CASOS.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => iniciarCaso(c.id)}
+                  className="w-full text-left rounded-2xl p-4"
+                  style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}
+                >
+                  <h3 className="text-sm font-semibold mb-1" style={{ color: "#1D1D1F" }}>{c.titulo}</h3>
+                  <p className="text-xs leading-relaxed" style={{ color: "#6E6E73" }}>{c.card}</p>
+                </button>
+              ))}
+            </div>
+            <ContactFooter />
+          </>
+        )}
+
+        {caso && (
+          <>
+            <button onClick={voltarMenu} className="text-xs font-medium mb-3" style={{ color: "#6E6E73" }}>
+              ← Trocar de caso
+            </button>
+
+            <div className="rounded-2xl p-4 mb-4" style={{ background: "#1D1D1F" }}>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "#22C55E" }}>{caso.titulo}</p>
+              <p className="text-sm leading-relaxed" style={{ color: "#FFFFFF" }}>{caso.card}</p>
+            </div>
+
+            {resultado && (
+              <div
+                className="rounded-2xl p-4 mb-4 text-center"
+                style={resultado === "certo" ? { background: "#EAFBF0", border: "1px solid #BBF7D0" } : { background: "#FEE2E2", border: "1px solid #FECACA" }}
+              >
+                <p className="text-lg font-bold mb-1" style={{ color: resultado === "certo" ? "#15803D" : "#DC2626" }}>
+                  {resultado === "certo" ? "✅ Correto" : "❌ Incorreto"}
+                </p>
+                <p className="text-xs mb-3" style={{ color: "#6E6E73" }}>
+                  {resultado === "certo" ? "Configuração adequada pra esse caso." : "Revise os parâmetros, os eletrodos, ou se esse caso deveria ser tratado."}
+                </p>
+                <button onClick={tentarDeNovo} className="px-5 py-2 rounded-full text-sm font-semibold" style={{ background: "#1D1D1F", color: "#FFFFFF" }}>
+                  Tentar de novo
+                </button>
+              </div>
+            )}
+
+            {!resultado && (
+              <>
+                <div className="rounded-2xl p-4 mb-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+                  <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#22C55E" }}>
+                    Posição dos eletrodos (toque no corpo — até 2)
+                  </p>
+                  <svg viewBox="0 0 200 420" width="100%" height="340">
+                    <g stroke="#D2D2D7" strokeWidth="6" strokeLinecap="round" fill="none">
+                      <line x1="100" y1="60" x2="100" y2="232" />
+                      <line x1="65" y1="85" x2="135" y2="85" />
+                      <line x1="65" y1="85" x2="50" y2="150" />
+                      <line x1="50" y1="150" x2="45" y2="205" />
+                      <line x1="45" y1="205" x2="43" y2="225" />
+                      <line x1="135" y1="85" x2="150" y2="150" />
+                      <line x1="150" y1="150" x2="155" y2="205" />
+                      <line x1="155" y1="205" x2="157" y2="225" />
+                      <line x1="80" y1="235" x2="120" y2="235" />
+                      <line x1="80" y1="235" x2="78" y2="305" />
+                      <line x1="78" y1="305" x2="76" y2="375" />
+                      <line x1="76" y1="375" x2="74" y2="395" />
+                      <line x1="120" y1="235" x2="122" y2="305" />
+                      <line x1="122" y1="305" x2="124" y2="375" />
+                      <line x1="124" y1="375" x2="126" y2="395" />
+                    </g>
+                    <circle cx="100" cy="30" r="18" fill="#EDEDF0" stroke="#D2D2D7" strokeWidth="3" />
+
+                    {Object.entries(ELETRO_ZONAS).map(([id, z]) => {
+                      const selecionado = eletrodos.some((e) => e.zonaId === id);
+                      return (
+                        <circle
+                          key={id}
+                          cx={z.x}
+                          cy={z.y}
+                          r={ZONA_RAIO}
+                          fill={selecionado ? "rgba(34,197,94,0.35)" : "rgba(156,163,175,0.15)"}
+                          stroke={selecionado ? "#22C55E" : "transparent"}
+                          strokeWidth="2"
+                          onClick={() => handleCliqueCorpo(id)}
+                          style={{ cursor: "pointer" }}
+                        />
+                      );
+                    })}
+                    {eletrodos.map((e) => (
+                      <circle key={e.zonaId} cx={ELETRO_ZONAS[e.zonaId].x} cy={ELETRO_ZONAS[e.zonaId].y} r="7" fill="#22C55E" stroke="#FFFFFF" strokeWidth="2" style={{ pointerEvents: "none" }} />
+                    ))}
+                  </svg>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs" style={{ color: "#9A9AA0" }}>{eletrodos.length} eletrodo(s) posicionado(s)</p>
+                    <button onClick={limparEletrodos} className="text-xs px-2 py-1 rounded border" style={{ borderColor: "#E5E5EA", color: "#6E6E73" }}>
+                      Limpar
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl p-4 mb-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+                  <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: "#22C55E" }}>
+                    Parâmetros
+                  </p>
+
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium" style={{ color: "#6E6E73" }}>Frequência</label>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: "#EAFBF0", color: "#16A34A" }}>{frequencia} Hz</span>
+                    </div>
+                    <input type="range" min={1} max={150} value={frequencia} onChange={(e) => setFrequencia(Number(e.target.value))} className="w-full" style={{ accentColor: "#22C55E" }} />
+                  </div>
+
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium" style={{ color: "#6E6E73" }}>Duração de pulso</label>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: "#EAFBF0", color: "#16A34A" }}>{duracaoPulso} µs</span>
+                    </div>
+                    <input type="range" min={20} max={600} step={10} value={duracaoPulso} onChange={(e) => setDuracaoPulso(Number(e.target.value))} className="w-full" style={{ accentColor: "#22C55E" }} />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium" style={{ color: "#6E6E73" }}>Intensidade</label>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: "#EAFBF0", color: "#16A34A" }}>{intensidade} mA</span>
+                    </div>
+                    <input type="range" min={1} max={100} value={intensidade} onChange={(e) => setIntensidade(Number(e.target.value))} className="w-full" style={{ accentColor: "#22C55E" }} />
+                  </div>
+                </div>
+
+                <div className="rounded-2xl p-4 mb-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+                  <label className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#22C55E" }}>
+                      Modulação (Ton/Toff · Rise/Decay)
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={modulacaoAtiva}
+                      onChange={(e) => setModulacaoAtiva(e.target.checked)}
+                    />
+                  </label>
+                  <p className="text-xs mb-3" style={{ color: "#9A9AA0" }}>
+                    {modulacaoAtiva ? "Ativada" : "Desativada"}
+                  </p>
+
+                  {modulacaoAtiva && (
+                    <>
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-medium" style={{ color: "#6E6E73" }}>Ton (contração)</label>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: "#EAFBF0", color: "#16A34A" }}>{ton} s</span>
+                        </div>
+                        <input type="range" min={1} max={15} value={ton} onChange={(e) => setTon(Number(e.target.value))} className="w-full" style={{ accentColor: "#22C55E" }} />
+                      </div>
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-medium" style={{ color: "#6E6E73" }}>Toff (repouso)</label>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: "#EAFBF0", color: "#16A34A" }}>{toff} s</span>
+                        </div>
+                        <input type="range" min={1} max={60} value={toff} onChange={(e) => setToff(Number(e.target.value))} className="w-full" style={{ accentColor: "#22C55E" }} />
+                      </div>
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-medium" style={{ color: "#6E6E73" }}>Rise (rampa de subida)</label>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: "#EAFBF0", color: "#16A34A" }}>{rise} s</span>
+                        </div>
+                        <input type="range" min={0} max={10} value={rise} onChange={(e) => setRise(Number(e.target.value))} className="w-full" style={{ accentColor: "#22C55E" }} />
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-medium" style={{ color: "#6E6E73" }}>Decay (rampa de descida)</label>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: "#EAFBF0", color: "#16A34A" }}>{decay} s</span>
+                        </div>
+                        <input type="range" min={0} max={10} value={decay} onChange={(e) => setDecay(Number(e.target.value))} className="w-full" style={{ accentColor: "#22C55E" }} />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex gap-2 mb-4">
+                  <button onClick={() => avaliar(false)} className="flex-1 py-2.5 rounded-full text-sm font-semibold" style={{ background: "#22C55E", color: "#FFFFFF" }}>
+                    Iniciar
+                  </button>
+                  <button onClick={() => avaliar(true)} className="flex-1 py-2.5 rounded-full text-sm font-semibold" style={{ background: "#DC2626", color: "#FFFFFF" }}>
+                    Contraindicado
+                  </button>
+                </div>
+              </>
+            )}
+
+            <ContactFooter />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================================
    TELA INICIAL — catálogo de ferramentas do FisioLab.
    Para adicionar uma nova ferramenta no futuro: crie o componente e
    acrescente uma entrada no array TOOLS abaixo.
@@ -1894,6 +2312,13 @@ const TOOLS = [
     subtitle: "Recursos Físicos",
     description: "Visualize tipos de corrente elétrica e seus parâmetros em tempo real.",
     component: SimuladorCorrentes,
+  },
+  {
+    id: "eletro-clinico",
+    title: "Simulador Clínico",
+    subtitle: "Recursos Físicos",
+    description: "Configure o aparelho de eletroterapia certo pra cada caso.",
+    component: SimuladorEletroterapiaClinico,
   },
   {
     id: "palavras-cruzadas",
@@ -1940,13 +2365,6 @@ const EXTERNAL_TOOLS = [
     subtitle: "Ortopedia e Traumatologia",
     description: "Avalie casos clínicos simulados com IA e pratique seu diagnóstico.",
     url: "https://claude.ai/public/artifacts/0e215812-fa6f-484a-8c05-25e0c19801f6",
-  },
-  {
-    id: "prescricao-recurso",
-    title: "Prescrição de Recurso",
-    subtitle: "Recursos Físicos",
-    description: "Investigue o caso e prescreva o recurso e os parâmetros corretos.",
-    url: "https://claude.ai/public/artifacts/5b2b7871-573d-41b8-8351-e54809452cde",
   },
 ];
 
