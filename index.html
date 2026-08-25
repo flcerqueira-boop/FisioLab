@@ -1900,10 +1900,10 @@ const ELETRO_ZONAS = {
   panturrilhaB: { x: 123, y: 340, label: "Panturrilha" },
   quadricepsA: { x: 72, y: 265, label: "Quadríceps (coxa anterior)" },
   quadricepsB: { x: 128, y: 265, label: "Quadríceps (coxa anterior)" },
-  antebracoPostA: { x: 47, y: 178, label: "Antebraço posterior" },
-  antebracoPostB: { x: 153, y: 178, label: "Antebraço posterior" },
+  antebracoPostA: { x: 46, y: 194, label: "Antebraço posterior" },
+  antebracoPostB: { x: 154, y: 194, label: "Antebraço posterior" },
 };
-const ZONA_RAIO = 26;
+const ZONA_RAIO = 16;
 
 const ELETRO_CASOS = [
   {
@@ -2194,7 +2194,11 @@ function SimuladorEletroterapiaClinico({ onBack }) {
                     ))}
                   </svg>
                   <div className="flex items-center justify-between">
-                    <p className="text-xs" style={{ color: "#9A9AA0" }}>{eletrodos.length} eletrodo(s) posicionado(s)</p>
+                    <p className="text-xs" style={{ color: "#9A9AA0" }}>
+                      {eletrodos.length === 0
+                        ? "Nenhum eletrodo posicionado"
+                        : "Selecionado: " + eletrodos.map((e) => ELETRO_ZONAS[e.zonaId].label).join(" + ")}
+                    </p>
                     <button onClick={limparEletrodos} className="text-xs px-2 py-1 rounded border" style={{ borderColor: "#E5E5EA", color: "#6E6E73" }}>
                       Limpar
                     </button>
