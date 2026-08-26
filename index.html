@@ -2303,6 +2303,307 @@ function SimuladorEletroterapiaClinico({ onBack }) {
   );
 }
 
+const MARCOS_OSSEOS = [
+  { id: 0, grupo: "Úmero", marco: "Cabeça do úmero", osso: "Úmero", regiao: "Proximal", face: "—", palpavel: "Não", funcao: "Articula-se com a cavidade glenoidal da escápula (articulação do ombro)" },
+  { id: 1, grupo: "Úmero", marco: "Colo do úmero", osso: "Úmero", regiao: "Proximal", face: "—", palpavel: "Não", funcao: "Transição entre a cabeça e os tubérculos; local comum de fratura" },
+  { id: 2, grupo: "Úmero", marco: "Tubérculo maior do úmero", osso: "Úmero", regiao: "Proximal", face: "Lateral", palpavel: "Sim", funcao: "Fixação dos músculos supraespinal, infraespinal e redondo menor (manguito rotador)" },
+  { id: 3, grupo: "Úmero", marco: "Tubérculo menor do úmero", osso: "Úmero", regiao: "Proximal", face: "Anterior", palpavel: "Sim", funcao: "Fixação do músculo subescapular (manguito rotador)" },
+  { id: 4, grupo: "Úmero", marco: "Sulco intertubercular", osso: "Úmero", regiao: "Proximal", face: "Anterior", palpavel: "Sim", funcao: "Passagem do tendão da cabeça longa do bíceps braquial" },
+  { id: 5, grupo: "Úmero", marco: "Epicôndilo medial do úmero", osso: "Úmero", regiao: "Distal", face: "Medial", palpavel: "Sim", funcao: "Fixação dos músculos flexores do antebraço" },
+  { id: 6, grupo: "Úmero", marco: "Epicôndilo lateral do úmero", osso: "Úmero", regiao: "Distal", face: "Lateral", palpavel: "Sim", funcao: "Fixação dos músculos extensores do antebraço" },
+  { id: 7, grupo: "Úmero", marco: "Fossa radial", osso: "Úmero", regiao: "Distal", face: "Anterior", palpavel: "Não", funcao: "Acomoda a cabeça do rádio durante a flexão do cotovelo" },
+  { id: 8, grupo: "Úmero", marco: "Fossa coronoide", osso: "Úmero", regiao: "Distal", face: "Anterior", palpavel: "Não", funcao: "Acomoda o processo coronoide da ulna durante a flexão do cotovelo" },
+  { id: 9, grupo: "Úmero", marco: "Fossa do olécrano", osso: "Úmero", regiao: "Distal", face: "Posterior", palpavel: "Não", funcao: "Acomoda o olécrano da ulna durante a extensão do cotovelo" },
+  { id: 10, grupo: "Úmero", marco: "Capítulo", osso: "Úmero", regiao: "Distal", face: "Anterior/Lateral", palpavel: "Não", funcao: "Articula-se com a cabeça do rádio" },
+  { id: 11, grupo: "Úmero", marco: "Tróclea (do úmero)", osso: "Úmero", regiao: "Distal", face: "—", palpavel: "Não", funcao: "Articula-se com a incisura troclear da ulna" },
+  { id: 12, grupo: "Rádio e Ulna", marco: "Cabeça do rádio", osso: "Rádio", regiao: "Proximal", face: "Lateral (no cotovelo)", palpavel: "Sim", funcao: "Articula-se com o capítulo do úmero e a incisura radial da ulna" },
+  { id: 13, grupo: "Rádio e Ulna", marco: "Olécrano", osso: "Ulna", regiao: "Proximal", face: "Posterior", palpavel: "Sim", funcao: "Fixação do tríceps braquial; forma a proeminência do cotovelo" },
+  { id: 14, grupo: "Rádio e Ulna", marco: "Incisura troclear", osso: "Ulna", regiao: "Proximal", face: "Anterior", palpavel: "Não", funcao: "Articula-se com a tróclea do úmero" },
+  { id: 15, grupo: "Rádio e Ulna", marco: "Tuberosidade do rádio", osso: "Rádio", regiao: "Proximal", face: "Anterior/Medial", palpavel: "Não", funcao: "Fixação do músculo bíceps braquial" },
+  { id: 16, grupo: "Mão", marco: "Ossos do carpo", osso: "Carpo", regiao: "Proximal (da mão)", face: "—", palpavel: "Parcial", funcao: "Formam o punho; permitem mobilidade da mão" },
+  { id: 17, grupo: "Mão", marco: "Metacarpo", osso: "Metacarpo", regiao: "Intermediária (da mão)", face: "—", palpavel: "Sim", funcao: "Ossos longos da palma da mão" },
+  { id: 18, grupo: "Mão", marco: "Falanges (mão)", osso: "Falanges", regiao: "Distal (da mão)", face: "—", palpavel: "Sim", funcao: "Ossos dos dedos da mão" },
+  { id: 19, grupo: "Clavícula e Escápula", marco: "Extremidade esternal", osso: "Clavícula", regiao: "Medial", face: "—", palpavel: "Sim", funcao: "Articula-se com o manúbrio do esterno (articulação esternoclavicular)" },
+  { id: 20, grupo: "Clavícula e Escápula", marco: "Extremidade acromial da clavícula", osso: "Clavícula", regiao: "Lateral", face: "—", palpavel: "Sim", funcao: "Articula-se com o acrômio da escápula (articulação acromioclavicular)" },
+  { id: 21, grupo: "Clavícula e Escápula", marco: "Ângulos da escápula (superior, inferior, lateral)", osso: "Escápula", regiao: "—", face: "—", palpavel: "Sim", funcao: "Pontos de referência estrutural; o ângulo lateral origina a cavidade glenoidal" },
+  { id: 22, grupo: "Clavícula e Escápula", marco: "Bordas da escápula (medial, lateral, superior)", osso: "Escápula", regiao: "—", face: "—", palpavel: "Sim", funcao: "Delimitam o corpo da escápula; fixação muscular (ex.: borda medial — romboides)" },
+  { id: 23, grupo: "Clavícula e Escápula", marco: "Espinha da escápula", osso: "Escápula", regiao: "—", face: "Posterior", palpavel: "Sim", funcao: "Divide as fossas supra e infraespinal; fixação do trapézio e do deltoide" },
+  { id: 24, grupo: "Clavícula e Escápula", marco: "Cavidade glenoidal", osso: "Escápula", regiao: "Lateral", face: "—", palpavel: "Não", funcao: "Articula-se com a cabeça do úmero (articulação do ombro)" },
+  { id: 25, grupo: "Clavícula e Escápula", marco: "Fossas da escápula (supraespinal e infraespinal)", osso: "Escápula", regiao: "—", face: "Posterior", palpavel: "Não", funcao: "Alojam os músculos supraespinal e infraespinal" },
+  { id: 26, grupo: "Clavícula e Escápula", marco: "Processo coracoide", osso: "Escápula", regiao: "—", face: "Anterior", palpavel: "Sim", funcao: "Fixação do bíceps braquial (cabeça curta), coracobraquial e peitoral menor" },
+  { id: 27, grupo: "Clavícula e Escápula", marco: "Acrômio", osso: "Escápula", regiao: "Lateral/Superior", face: "—", palpavel: "Sim", funcao: "Articula-se com a extremidade lateral da clavícula; fixação do deltoide e trapézio" },
+  { id: 28, grupo: "Coluna Vertebral — Vértebra Típica", marco: "Corpo vertebral", osso: "Vértebra", regiao: "—", face: "Anterior", palpavel: "Não", funcao: "Suporta o peso; une-se aos discos intervertebrais" },
+  { id: 29, grupo: "Coluna Vertebral — Vértebra Típica", marco: "Pedículo", osso: "Vértebra", regiao: "—", face: "—", palpavel: "Não", funcao: "Conecta o corpo vertebral às lâminas; forma parte do forame vertebral" },
+  { id: 30, grupo: "Coluna Vertebral — Vértebra Típica", marco: "Lâminas", osso: "Vértebra", regiao: "—", face: "Posterior", palpavel: "Não", funcao: "Formam a parte posterior do arco vertebral; protegem a medula" },
+  { id: 31, grupo: "Coluna Vertebral — Vértebra Típica", marco: "Processo espinhoso", osso: "Vértebra", regiao: "—", face: "Posterior", palpavel: "Sim", funcao: "Fixação de ligamentos e músculos paravertebrais" },
+  { id: 32, grupo: "Coluna Vertebral — Vértebra Típica", marco: "Processo transverso", osso: "Vértebra", regiao: "—", face: "Lateral", palpavel: "Não", funcao: "Fixação muscular/ligamentar; nas torácicas articula-se com as costelas" },
+  { id: 33, grupo: "Coluna Vertebral — Vértebra Típica", marco: "Canal medular", osso: "Vértebra", regiao: "—", face: "—", palpavel: "Não", funcao: "Aloja a medula espinhal" },
+  { id: 34, grupo: "Coluna Vertebral — Vértebra Típica", marco: "Fóvea costal", osso: "Vértebra torácica", regiao: "—", face: "Lateral", palpavel: "Não", funcao: "Local de articulação com a cabeça das costelas" },
+  { id: 35, grupo: "Coluna Vertebral — Atlas e Áxis", marco: "Dente do áxis (processo odontoide)", osso: "Áxis (C2)", regiao: "—", face: "—", palpavel: "Não", funcao: "Permite rotação da cabeça; articula-se com o arco anterior do atlas" },
+  { id: 36, grupo: "Coluna Vertebral — Atlas e Áxis", marco: "Arco anterior do atlas", osso: "Atlas (C1)", regiao: "—", face: "Anterior", palpavel: "Não", funcao: "Articula-se com o dente do áxis" },
+  { id: 37, grupo: "Coluna Vertebral — Atlas e Áxis", marco: "Arco posterior do atlas", osso: "Atlas (C1)", regiao: "—", face: "Posterior", palpavel: "Sim", funcao: "Forma a parte posterior do anel do atlas; sulco para a artéria vertebral" },
+  { id: 38, grupo: "Coluna Vertebral — Atlas e Áxis", marco: "Faces articulares superiores do atlas", osso: "Atlas (C1)", regiao: "—", face: "Superior", palpavel: "Não", funcao: "Articulam-se com os côndilos occipitais (articulação atlanto-occipital)" },
+  { id: 39, grupo: "Sacro e Cóccix", marco: "Promontório", osso: "Sacro", regiao: "Superior", face: "Anterior", palpavel: "Não", funcao: "Marco obstétrico importante; referência para medidas pélvicas" },
+  { id: 40, grupo: "Sacro e Cóccix", marco: "Asa do sacro", osso: "Sacro", regiao: "Superior", face: "Lateral", palpavel: "Não", funcao: "Articula-se com o ílio (articulação sacroilíaca)" },
+  { id: 41, grupo: "Sacro e Cóccix", marco: "Cóccix", osso: "Cóccix", regiao: "—", face: "—", palpavel: "Sim", funcao: "Remanescente da cauda; fixação de ligamentos e músculos do assoalho pélvico" },
+  { id: 42, grupo: "Esterno", marco: "Manúbrio", osso: "Esterno", regiao: "Superior", face: "—", palpavel: "Sim", funcao: "Articula-se com as clavículas e o 1º par de costelas" },
+  { id: 43, grupo: "Esterno", marco: "Corpo do esterno", osso: "Esterno", regiao: "Intermediária/Inferior", face: "—", palpavel: "Sim", funcao: "Articula-se com a maioria das costelas (2ª a 7ª)" },
+  { id: 44, grupo: "Esterno", marco: "Processo xifoide", osso: "Esterno", regiao: "Inferior", face: "—", palpavel: "Sim", funcao: "Fixação do diafragma e de músculos abdominais" },
+  { id: 45, grupo: "Esterno", marco: "Incisura jugular", osso: "Esterno (manúbrio)", regiao: "Superior", face: "—", palpavel: "Sim", funcao: "Referência palpável entre as clavículas" },
+  { id: 46, grupo: "Esterno", marco: "Incisura clavicular", osso: "Esterno (manúbrio)", regiao: "Superior", face: "Superolateral", palpavel: "Não", funcao: "Articula-se com a extremidade esternal da clavícula" },
+  { id: 47, grupo: "Costelas e Mandíbula", marco: "Costelas", osso: "Costela", regiao: "—", face: "—", palpavel: "Parcial", funcao: "Protegem órgãos torácicos; participam da mecânica respiratória" },
+  { id: 48, grupo: "Costelas e Mandíbula", marco: "Corpo da mandíbula", osso: "Mandíbula", regiao: "Inferior", face: "—", palpavel: "Sim", funcao: "Porção horizontal que sustenta os dentes inferiores" },
+  { id: 49, grupo: "Quadril e Fêmur Proximal", marco: "Cabeça do fêmur", osso: "Fêmur", regiao: "Proximal", face: "—", palpavel: "Não", funcao: "Articula-se com o acetábulo (articulação do quadril)" },
+  { id: 50, grupo: "Quadril e Fêmur Proximal", marco: "Fóvea da cabeça do fêmur", osso: "Fêmur", regiao: "Proximal", face: "—", palpavel: "Não", funcao: "Fixação do ligamento da cabeça do fêmur (ligamento redondo)" },
+  { id: 51, grupo: "Quadril e Fêmur Proximal", marco: "Colo do fêmur", osso: "Fêmur", regiao: "Proximal", face: "—", palpavel: "Não", funcao: "Conecta a cabeça à diáfise; local comum de fratura em idosos" },
+  { id: 52, grupo: "Quadril e Fêmur Proximal", marco: "Trocânter maior do fêmur", osso: "Fêmur", regiao: "Proximal", face: "Lateral", palpavel: "Sim", funcao: "Fixação de músculos glúteos e outros rotadores/abdutores do quadril" },
+  { id: 53, grupo: "Quadril e Fêmur Proximal", marco: "Trocânter menor do fêmur", osso: "Fêmur", regiao: "Proximal", face: "Posteromedial", palpavel: "Não", funcao: "Fixação do músculo iliopsoas" },
+  { id: 54, grupo: "Quadril e Fêmur Proximal", marco: "Linha intertrocantérica", osso: "Fêmur", regiao: "Proximal", face: "Anterior", palpavel: "Não", funcao: "Fixação do ligamento iliofemoral" },
+  { id: 55, grupo: "Quadril e Fêmur Proximal", marco: "Linha áspera", osso: "Fêmur", regiao: "Diáfise", face: "Posterior", palpavel: "Não", funcao: "Fixação de músculos adutores e porções do quadríceps (vasto medial/lateral)" },
+  { id: 56, grupo: "Quadril e Fêmur Proximal", marco: "Crista ilíaca", osso: "Ílio", regiao: "Superior", face: "—", palpavel: "Sim", funcao: "Fixação de músculos abdominais e do latíssimo do dorso" },
+  { id: 57, grupo: "Quadril e Fêmur Proximal", marco: "Espinha ilíaca ântero-superior e ântero-inferior (EIAS/EIAI)", osso: "Ílio", regiao: "—", face: "Anterior", palpavel: "Sim", funcao: "Fixação muscular/ligamentar (ex.: EIAS — sartório e tensor da fáscia lata; EIAI — reto femoral)" },
+  { id: 58, grupo: "Quadril e Fêmur Proximal", marco: "Espinha ilíaca póstero-superior e póstero-inferior (EIPS/EIPI)", osso: "Ílio", regiao: "—", face: "Posterior", palpavel: "Sim", funcao: "Fixação muscular/ligamentar; EIPS corresponde à \"fossinha\" lombar visível na superfície" },
+  { id: 59, grupo: "Quadril e Fêmur Proximal", marco: "Asa do ílio", osso: "Ílio", regiao: "—", face: "—", palpavel: "Parcial", funcao: "Porção larga e expandida; forma a fossa ilíaca" },
+  { id: 60, grupo: "Quadril e Fêmur Proximal", marco: "Forame obturatório", osso: "Ísquio/Púbis", regiao: "Anteroinferior da pelve", face: "—", palpavel: "Não", funcao: "Espaço por onde passam vasos e o nervo obturatório" },
+  { id: 61, grupo: "Quadril e Fêmur Proximal", marco: "Ramo do púbis", osso: "Púbis", regiao: "—", face: "—", palpavel: "Não", funcao: "Parte do contorno do forame obturatório; une-se ao ísquio" },
+  { id: 62, grupo: "Quadril e Fêmur Proximal", marco: "Ramo do ísquio", osso: "Ísquio", regiao: "—", face: "—", palpavel: "Não", funcao: "Parte do contorno do forame obturatório; une-se ao púbis" },
+  { id: 63, grupo: "Quadril e Fêmur Proximal", marco: "Acetábulo", osso: "Quadril (ílio+ísquio+púbis)", regiao: "Lateral", face: "—", palpavel: "Não", funcao: "Articula-se com a cabeça do fêmur" },
+  { id: 64, grupo: "Quadril e Fêmur Proximal", marco: "Face sinfisial", osso: "Púbis", regiao: "Medial", face: "—", palpavel: "Não", funcao: "Articula-se com o púbis contralateral (sínfise púbica)" },
+  { id: 65, grupo: "Quadril e Fêmur Proximal", marco: "Tuberosidade isquiática", osso: "Ísquio", regiao: "—", face: "Posterior", palpavel: "Sim", funcao: "Fixação dos músculos isquiotibiais; suporta peso ao sentar" },
+  { id: 66, grupo: "Quadril e Fêmur Proximal", marco: "Face auricular", osso: "Ílio", regiao: "—", face: "Medial", palpavel: "Não", funcao: "Articula-se com o sacro (articulação sacroilíaca)" },
+  { id: 67, grupo: "Joelho", marco: "Côndilo medial do fêmur", osso: "Fêmur", regiao: "Distal", face: "Medial", palpavel: "Sim", funcao: "Articula-se com o côndilo medial da tíbia (articulação do joelho)" },
+  { id: 68, grupo: "Joelho", marco: "Côndilo lateral do fêmur", osso: "Fêmur", regiao: "Distal", face: "Lateral", palpavel: "Sim", funcao: "Articula-se com o côndilo lateral da tíbia (articulação do joelho)" },
+  { id: 69, grupo: "Joelho", marco: "Tróclea femoral", osso: "Fêmur", regiao: "Distal", face: "Anterior", palpavel: "Não", funcao: "Articula-se com a face posterior da patela" },
+  { id: 70, grupo: "Joelho", marco: "Sulco intercondilar", osso: "Fêmur", regiao: "Distal", face: "Posterior", palpavel: "Não", funcao: "Espaço entre os côndilos; fixação dos ligamentos cruzados" },
+  { id: 71, grupo: "Joelho", marco: "Patela", osso: "Patela", regiao: "—", face: "Anterior", palpavel: "Sim", funcao: "Osso sesamoide; aumenta a alavanca do quadríceps femoral" },
+  { id: 72, grupo: "Joelho", marco: "Platô tibial", osso: "Tíbia", regiao: "Proximal", face: "Superior", palpavel: "Parcial", funcao: "Superfície articular que recebe os côndilos femorais" },
+  { id: 73, grupo: "Joelho", marco: "Côndilo medial da tíbia", osso: "Tíbia", regiao: "Proximal", face: "Medial", palpavel: "Sim", funcao: "Compõe o platô tibial; articula-se com o côndilo medial do fêmur" },
+  { id: 74, grupo: "Joelho", marco: "Côndilo lateral da tíbia", osso: "Tíbia", regiao: "Proximal", face: "Lateral", palpavel: "Sim", funcao: "Compõe o platô tibial; articula-se com o côndilo lateral do fêmur" },
+  { id: 75, grupo: "Joelho", marco: "Eminência intercondilar", osso: "Tíbia", regiao: "Proximal", face: "Superior", palpavel: "Não", funcao: "Região relacionada à inserção dos ligamentos cruzados e às áreas intercondilares dos meniscos" },
+  { id: 76, grupo: "Joelho", marco: "Tuberosidade da tíbia", osso: "Tíbia", regiao: "Proximal", face: "Anterior", palpavel: "Sim", funcao: "Fixação do ligamento patelar" },
+  { id: 77, grupo: "Joelho", marco: "Margem anterior da tíbia", osso: "Tíbia", regiao: "Diáfise", face: "Anterior", palpavel: "Sim", funcao: "Crista subcutânea palpável (a \"canela\")" },
+  { id: 78, grupo: "Tornozelo e Pé", marco: "Cabeça da fíbula", osso: "Fíbula", regiao: "Proximal", face: "Lateral", palpavel: "Sim", funcao: "Fixação do bíceps femoral e do ligamento colateral lateral" },
+  { id: 79, grupo: "Tornozelo e Pé", marco: "Maléolo lateral", osso: "Fíbula", regiao: "Distal", face: "Lateral", palpavel: "Sim", funcao: "Estabiliza lateralmente o tornozelo" },
+  { id: 80, grupo: "Tornozelo e Pé", marco: "Maléolo medial", osso: "Tíbia", regiao: "Distal", face: "Medial", palpavel: "Sim", funcao: "Estabiliza medialmente o tornozelo" },
+  { id: 81, grupo: "Tornozelo e Pé", marco: "Tróclea do tálus", osso: "Tálus", regiao: "—", face: "Superior", palpavel: "Não", funcao: "Articula-se com a tíbia e a fíbula (articulação talocrural)" },
+  { id: 82, grupo: "Tornozelo e Pé", marco: "Cabeça do tálus", osso: "Tálus", regiao: "—", face: "Anterior", palpavel: "Sim", funcao: "Articula-se com o navicular" },
+  { id: 83, grupo: "Tornozelo e Pé", marco: "Processo lateral do tálus", osso: "Tálus", regiao: "—", face: "Lateral", palpavel: "Não", funcao: "Articula-se com a fíbula; ponto comum de fratura por inversão forçada" },
+  { id: 84, grupo: "Tornozelo e Pé", marco: "Processo posterior do tálus", osso: "Tálus", regiao: "—", face: "Posterior", palpavel: "Não", funcao: "Ponto de relação com o tendão do flexor longo do hálux" },
+  { id: 85, grupo: "Tornozelo e Pé", marco: "Calcâneo", osso: "Calcâneo", regiao: "—", face: "—", palpavel: "Sim", funcao: "Maior osso do tarso; forma o calcanhar; fixação do tendão do calcâneo (Aquiles)" },
+  { id: 86, grupo: "Tornozelo e Pé", marco: "Navicular", osso: "Navicular", regiao: "—", face: "Medial", palpavel: "Sim", funcao: "Osso do tarso entre o tálus e os cuneiformes" },
+  { id: 87, grupo: "Tornozelo e Pé", marco: "Cuboide", osso: "Cuboide", regiao: "—", face: "Lateral", palpavel: "Parcial", funcao: "Osso do tarso lateral; articula-se com o calcâneo e os metatarsos laterais" },
+  { id: 88, grupo: "Tornozelo e Pé", marco: "Cuneiforme medial", osso: "Cuneiforme", regiao: "—", face: "Medial", palpavel: "Parcial", funcao: "Articula-se com o metatarso correspondente e participa da formação dos arcos do pé" },
+  { id: 89, grupo: "Tornozelo e Pé", marco: "Cuneiforme intermédio", osso: "Cuneiforme", regiao: "—", face: "Intermediário", palpavel: "Parcial", funcao: "Articula-se com o metatarso correspondente e participa da formação dos arcos do pé" },
+  { id: 90, grupo: "Tornozelo e Pé", marco: "Cuneiforme lateral", osso: "Cuneiforme", regiao: "—", face: "Lateral", palpavel: "Parcial", funcao: "Articula-se com o metatarso correspondente e participa da formação dos arcos do pé" },
+  { id: 91, grupo: "Tornozelo e Pé", marco: "Metatarsos", osso: "Metatarso", regiao: "—", face: "—", palpavel: "Sim", funcao: "Ossos longos do pé, entre o tarso e as falanges" },
+  { id: 92, grupo: "Tornozelo e Pé", marco: "Falanges (pé)", osso: "Falanges", regiao: "Distal", face: "—", palpavel: "Sim", funcao: "Ossos dos dedos do pé" },
+];
+
+/* =========================================================================
+   DETETIVE ÓSSEO — o aluno sorteia uma pista (gerada a partir do banco de
+   marcos ósseos acima) e escolhe entre 5 opções, contra o tempo. As opções
+   erradas são sempre estruturas parecidas (mesmo osso, ou mesmo grupo
+   anatômico), pra exigir raciocínio de verdade, não só reconhecimento.
+   ========================================================================= */
+
+function gerarPista(m) {
+  const partes = [];
+  if (m.regiao && m.regiao !== "—") partes.push("na região " + m.regiao.toLowerCase());
+  if (m.face && m.face !== "—") partes.push("na face/localização " + m.face.toLowerCase());
+  const localizacao = partes.length ? ", " + partes.join(", ") : "";
+  return `Sou uma estrutura do(a) ${m.osso}${localizacao}. ${m.funcao}.`;
+}
+
+function embaralhar(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function gerarOpcoes(correta, banco) {
+  const mesmoOsso = banco.filter((m) => m.id !== correta.id && m.osso === correta.osso && m.osso);
+  const mesmoGrupo = banco.filter((m) => m.id !== correta.id && m.grupo === correta.grupo && m.osso !== correta.osso);
+  const resto = banco.filter((m) => m.id !== correta.id && m.grupo !== correta.grupo && m.osso !== correta.osso);
+
+  const candidatos = [...embaralhar(mesmoOsso), ...embaralhar(mesmoGrupo), ...embaralhar(resto)];
+  const distratores = candidatos.slice(0, 4);
+  return embaralhar([correta, ...distratores]);
+}
+
+function gerarRodadas(banco, quantidade) {
+  const sorteados = embaralhar(banco).slice(0, quantidade);
+  return sorteados.map((m) => ({
+    correta: m,
+    pista: gerarPista(m),
+    opcoes: gerarOpcoes(m, banco),
+  }));
+}
+
+function DetetiveOsseo({ onBack }) {
+  const { useState, useEffect, useRef } = React;
+  const ROUND_TIME = 20;
+  const NUM_RODADAS = 12;
+
+  const [fase, setFase] = useState("intro"); // "intro" | "jogando" | "fim"
+  const [rodadas, setRodadas] = useState([]);
+  const [indice, setIndice] = useState(0);
+  const [tempo, setTempo] = useState(ROUND_TIME);
+  const [pontuacao, setPontuacao] = useState(0);
+  const [selecionado, setSelecionado] = useState(null);
+  const [travarToque, setTravarToque] = useState(false);
+  const timerRef = useRef(null);
+
+  function iniciar() {
+    setRodadas(gerarRodadas(MARCOS_OSSEOS, NUM_RODADAS));
+    setIndice(0);
+    setPontuacao(0);
+    setTempo(ROUND_TIME);
+    setSelecionado(null);
+    setTravarToque(false);
+    setFase("jogando");
+  }
+
+  const rodadaAtual = rodadas[indice];
+
+  useEffect(() => {
+    if (fase !== "jogando") return;
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setTempo((t) => {
+        if (t <= 1) {
+          clearInterval(timerRef.current);
+          avancar(false, null);
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+    // eslint-disable-next-line
+  }, [fase, indice]);
+
+  function avancar(acertou, marcoEscolhido) {
+    setTravarToque(true);
+    setSelecionado(marcoEscolhido);
+    if (acertou) setPontuacao((p) => p + 1);
+    setTimeout(() => {
+      setSelecionado(null);
+      setTravarToque(false);
+      if (indice + 1 >= rodadas.length) {
+        setFase("fim");
+      } else {
+        setIndice((i) => i + 1);
+        setTempo(ROUND_TIME);
+      }
+    }, 900);
+  }
+
+  function escolher(opcao) {
+    if (travarToque) return;
+    if (timerRef.current) clearInterval(timerRef.current);
+    avancar(opcao.id === rodadaAtual.correta.id, opcao.marco);
+  }
+
+  return (
+    <div className="min-h-screen w-full" style={{ background: "#F5F5F7" }}>
+      <div
+        className="px-5 pb-4 border-b flex items-center justify-between"
+        style={{ borderColor: "#E5E5EA", background: "#FFFFFF", paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
+      >
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: "#1D1D1F" }}>Detetive Ósseo</h1>
+          <p className="text-sm" style={{ color: "#6E6E73" }}>Anatomia Óssea</p>
+        </div>
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap"
+            style={{ background: "#F5F5F7", border: "1px solid #E5E5EA", color: "#6E6E73" }}
+          >
+            ← FisioLab
+          </button>
+        )}
+      </div>
+
+      <div className="p-4 max-w-md mx-auto">
+        {fase === "intro" && (
+          <div className="rounded-2xl p-5 text-center" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+            <p className="text-sm leading-relaxed mb-4" style={{ color: "#1D1D1F" }}>
+              Leia a pista e descubra qual marco ósseo é — {NUM_RODADAS} rodadas, {ROUND_TIME}s cada.
+              As opções erradas são sempre estruturas parecidas, então preste atenção nos detalhes.
+            </p>
+            <button onClick={iniciar} className="w-full py-2.5 rounded-full text-sm font-semibold" style={{ background: "#22C55E", color: "#FFFFFF" }}>
+              Começar
+            </button>
+          </div>
+        )}
+
+        {fase === "jogando" && rodadaAtual && (
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold" style={{ color: "#6E6E73" }}>
+                Rodada {indice + 1}/{rodadas.length} · Pontos: {pontuacao}
+              </p>
+              <span
+                className="text-xs font-bold px-2.5 py-1 rounded-full"
+                style={{ background: tempo <= 5 ? "#FEE2E2" : "#EAFBF0", color: tempo <= 5 ? "#DC2626" : "#16A34A" }}
+              >
+                {tempo}s
+              </span>
+            </div>
+
+            <div className="rounded-2xl p-4 mb-4" style={{ background: "#1D1D1F" }}>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#22C55E" }}>🔍 Pista</p>
+              <p className="text-sm leading-relaxed" style={{ color: "#FFFFFF" }}>{rodadaAtual.pista}</p>
+            </div>
+
+            <div className="space-y-2">
+              {rodadaAtual.opcoes.map((op) => {
+                const foiSelecionado = selecionado === op.marco;
+                const ehCorreta = op.id === rodadaAtual.correta.id;
+                let estilo = { background: "#FFFFFF", border: "1px solid #E5E5EA", color: "#1D1D1F" };
+                if (selecionado) {
+                  if (ehCorreta) estilo = { background: "#EAFBF0", border: "1px solid #22C55E", color: "#15803D" };
+                  else if (foiSelecionado) estilo = { background: "#FEE2E2", border: "1px solid #EF4444", color: "#DC2626" };
+                }
+                return (
+                  <button
+                    key={op.id}
+                    onClick={() => escolher(op)}
+                    disabled={travarToque}
+                    className="w-full text-left rounded-xl px-4 py-3 text-sm font-medium"
+                    style={estilo}
+                  >
+                    {op.marco}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {fase === "fim" && (
+          <div className="rounded-2xl p-5 text-center" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+            <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "#22C55E" }}>Resultado</p>
+            <p className="text-3xl font-bold mb-1" style={{ color: "#1D1D1F" }}>{pontuacao} / {rodadas.length}</p>
+            <p className="text-sm mb-4" style={{ color: "#6E6E73" }}>
+              {pontuacao === rodadas.length ? "Detetive nível especialista!" : pontuacao >= rodadas.length * 0.7 ? "Muito bom!" : "Vale revisar os marcos e jogar de novo."}
+            </p>
+            <button onClick={iniciar} className="w-full py-2.5 rounded-full text-sm font-semibold" style={{ background: "#22C55E", color: "#FFFFFF" }}>
+              Jogar de novo
+            </button>
+          </div>
+        )}
+
+        <ContactFooter />
+      </div>
+    </div>
+  );
+}
+
 /* =========================================================================
    TELA INICIAL — catálogo de ferramentas do FisioLab.
    Para adicionar uma nova ferramenta no futuro: crie o componente e
@@ -2323,6 +2624,13 @@ const TOOLS = [
     subtitle: "Recursos Físicos",
     description: "Configure o aparelho de eletroterapia certo pra cada caso.",
     component: SimuladorEletroterapiaClinico,
+  },
+  {
+    id: "detetive-osseo",
+    title: "Detetive Ósseo",
+    subtitle: "Cinesiologia e Biomecânica",
+    description: "Decifre a pista e descubra o marco ósseo, contra o tempo.",
+    component: DetetiveOsseo,
   },
   {
     id: "palavras-cruzadas",
