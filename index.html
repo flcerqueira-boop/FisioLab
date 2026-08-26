@@ -2442,22 +2442,42 @@ function gerarRodadas(banco, quantidade) {
   }));
 }
 
+const DETETIVE_DIFICULDADES = [
+  { id: "facil", label: "Fácil", tempo: 40 },
+  { id: "medio", label: "Médio", tempo: 30 },
+  { id: "dificil", label: "Difícil", tempo: 20 },
+  { id: "mestre", label: "Mestre da Anatomia", tempo: 10 },
+];
+
+const DETETIVE_GRUPOS = [...new Set(MARCOS_OSSEOS.map((m) => m.grupo))];
+
 function DetetiveOsseo({ onBack }) {
   const { useState, useEffect, useRef } = React;
-  const ROUND_TIME = 20;
-  const NUM_RODADAS = 12;
 
   const [fase, setFase] = useState("intro"); // "intro" | "jogando" | "fim"
+  const [dificuldade, setDificuldade] = useState("dificil");
+  const [numPerguntas, setNumPerguntas] = useState(12);
+  const [gruposSelecionados, setGruposSelecionados] = useState(DETETIVE_GRUPOS);
   const [rodadas, setRodadas] = useState([]);
   const [indice, setIndice] = useState(0);
-  const [tempo, setTempo] = useState(ROUND_TIME);
+  const [tempo, setTempo] = useState(20);
   const [pontuacao, setPontuacao] = useState(0);
   const [selecionado, setSelecionado] = useState(null);
   const [travarToque, setTravarToque] = useState(false);
   const timerRef = useRef(null);
 
+  const ROUND_TIME = DETETIVE_DIFICULDADES.find((d) => d.id === dificuldade).tempo;
+
+  function toggleGrupo(g) {
+    setGruposSelecionados((prev) =>
+      prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]
+    );
+  }
+
   function iniciar() {
-    setRodadas(gerarRodadas(MARCOS_OSSEOS, NUM_RODADAS));
+    const banco = MARCOS_OSSEOS.filter((m) => gruposSelecionados.includes(m.grupo));
+    const bancoFinal = banco.length > 0 ? banco : MARCOS_OSSEOS;
+    setRodadas(gerarRodadas(bancoFinal, numPerguntas));
     setIndice(0);
     setPontuacao(0);
     setTempo(ROUND_TIME);
@@ -2530,11 +2550,72 @@ function DetetiveOsseo({ onBack }) {
 
       <div className="p-4 max-w-md mx-auto">
         {fase === "intro" && (
-          <div className="rounded-2xl p-5 text-center" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
-            <p className="text-sm leading-relaxed mb-4" style={{ color: "#1D1D1F" }}>
-              Leia a pista e descubra qual marco ósseo é — {NUM_RODADAS} rodadas, {ROUND_TIME}s cada.
-              As opções erradas são sempre estruturas parecidas, então preste atenção nos detalhes.
-            </p>
+          <div className="space-y-4">
+            <div className="rounded-2xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+              <p className="text-sm leading-relaxed" style={{ color: "#1D1D1F" }}>
+                Leia a pista e descubra qual marco ósseo é. As opções erradas são sempre
+                estruturas parecidas, então preste atenção nos detalhes.
+              </p>
+            </div>
+
+            <div className="rounded-2xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#22C55E" }}>Dificuldade</p>
+              <div className="grid grid-cols-2 gap-2">
+                {DETETIVE_DIFICULDADES.map((d) => (
+                  <button
+                    key={d.id}
+                    onClick={() => setDificuldade(d.id)}
+                    className="py-2 rounded-lg text-xs font-semibold leading-tight"
+                    style={dificuldade === d.id ? { background: "#22C55E", color: "#FFFFFF" } : { background: "#F5F5F7", color: "#6E6E73", border: "1px solid #E5E5EA" }}
+                  >
+                    {d.label}
+                    <br />
+                    <span style={{ fontWeight: 400, opacity: 0.85 }}>{d.tempo}s</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#22C55E" }}>Número de perguntas</p>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: "#EAFBF0", color: "#16A34A" }}>{numPerguntas}</span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={15}
+                value={numPerguntas}
+                onChange={(e) => setNumPerguntas(Number(e.target.value))}
+                className="w-full"
+                style={{ accentColor: "#22C55E" }}
+              />
+            </div>
+
+            <div className="rounded-2xl p-4" style={{ background: "#FFFFFF", border: "1px solid #E5E5EA" }}>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#22C55E" }}>Parte do corpo</p>
+                <button
+                  onClick={() => setGruposSelecionados(gruposSelecionados.length === DETETIVE_GRUPOS.length ? [] : DETETIVE_GRUPOS)}
+                  className="text-xs font-medium"
+                  style={{ color: "#6E6E73" }}
+                >
+                  {gruposSelecionados.length === DETETIVE_GRUPOS.length ? "Limpar" : "Selecionar todas"}
+                </button>
+              </div>
+              <div className="space-y-1.5">
+                {DETETIVE_GRUPOS.map((g) => (
+                  <label key={g} className="flex items-center gap-2 text-sm" style={{ color: "#1D1D1F" }}>
+                    <input type="checkbox" checked={gruposSelecionados.includes(g)} onChange={() => toggleGrupo(g)} />
+                    {g}
+                  </label>
+                ))}
+              </div>
+              {gruposSelecionados.length === 0 && (
+                <p className="text-xs mt-2" style={{ color: "#9A9AA0" }}>Nenhuma selecionada — o jogo usa o banco inteiro.</p>
+              )}
+            </div>
+
             <button onClick={iniciar} className="w-full py-2.5 rounded-full text-sm font-semibold" style={{ background: "#22C55E", color: "#FFFFFF" }}>
               Começar
             </button>
